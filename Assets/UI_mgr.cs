@@ -45,10 +45,9 @@ public class UI_mgr : MonoBehaviour {
 	
 	void ThrowDie(GameObject die)
 	{
-		float force_x = throwForce; //throwForce * Input.GetAxis("Vertical");
 		float force_z = throwForce; //throwForce * Input.GetAxis("Horizontal");
 		
-		die.rigidbody.AddForce(0, 0.0f, force_z);
+		die.rigidbody.AddForce(0.0f, 0.0f, force_z);
 		die.rigidbody.AddTorque(600.0f, 600.0f, 600.0f);
 	}
 	

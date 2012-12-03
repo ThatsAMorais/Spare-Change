@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>Unity Web Player | WebRP</title>
+		<title>Unity Web Player | WebRolePlay</title>
 		<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js'></script>
 		<script type="text/javascript">
 		<!--
@@ -21,14 +21,14 @@
 				
 			};
 			var u = new UnityObject2(config);
-
+			
 			jQuery(function() {
 
 				var $missingScreen = jQuery("#unityPlayer").find(".missing");
 				var $brokenScreen = jQuery("#unityPlayer").find(".broken");
 				$missingScreen.hide();
 				$brokenScreen.hide();
-				
+
 				u.observeProgress(function (progress) {
 					switch(progress.pluginStatus) {
 						case "broken":
@@ -56,7 +56,7 @@
 						break;
 					}
 				});
-				u.initPlugin(jQuery("#unityPlayer")[0], "WebRP_deploy.unity3d");
+				u.initPlugin(jQuery("#unityPlayer")[0], "WebPlayer.unity3d");
 			});
 		-->
 		</script>
@@ -64,15 +64,15 @@
 		<!--
 		body {
 			font-family: Helvetica, Verdana, Arial, sans-serif;
-			background-color: white;
-			color: black;
+			background-color: black;
+			color: white;
 			text-align: center;
 		}
 		a:link, a:visited {
-			color: #000;
+			color: #bfbfbf;
 		}
 		a:active, a:hover {
-			color: #666;
+			color: #bfbfbf;
 		}
 		p.header {
 			font-size: small;
@@ -116,17 +116,12 @@
 		</style>
 	</head>
 	<body>
-		<p class="header"><span>Unity Web Player | </span>WebRP</p>
+		<p class="header"><span>Unity Web Player | </span>WebRolePlay</p>
 		<div class="content">
 			<div id="unityPlayer">
 				<div class="missing">
 					<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now!">
 						<img alt="Unity Web Player. Install now!" src="http://webplayer.unity3d.com/installation/getunity.png" width="193" height="63" />
-					</a>
-				</div>
-				<div class="broken">
-					<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now! Restart your browser after install.">
-						<img alt="Unity Web Player. Install now! Restart your browser after install." src="http://webplayer.unity3d.com/installation/getunityrestart.png" width="193" height="63" />
 					</a>
 				</div>
 			</div>

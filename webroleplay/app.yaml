@@ -1,0 +1,21 @@
+application: webroleplay
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+
+- url: /WebPlayer\.unity3d
+  static_files: WebPlayer/WebPlayer.unity3d
+  upload: WebPlayer/WebPlayer\.unity3d
+
+- url: .*
+  script: main.app
+
+libraries:
+- name: webapp2
+  version: "2.5.1"
