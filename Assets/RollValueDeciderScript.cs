@@ -13,6 +13,11 @@ public class RollValueDeciderScript : MonoBehaviour {
 		currentValue = faceValues[faceName];
 	}
 	
+	public bool IsAtRest()
+	{
+		return rigidbody.IsSleeping();
+	}
+	
 	void Awake ()
 	{
 		currentValue = 0;
