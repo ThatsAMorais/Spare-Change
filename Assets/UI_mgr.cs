@@ -72,7 +72,7 @@ public class UI_mgr : MonoBehaviour {
 	private Throw lastThrow;
 	
 	// Use this for initialization
-	void Start () {
+	void Awake () {
 		diceNames.Add("d4");
 		diceNames.Add("d6_s_p");
 		diceNames.Add("d6_s_d");
