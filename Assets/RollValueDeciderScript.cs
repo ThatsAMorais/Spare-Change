@@ -4,21 +4,53 @@ using System.Collections.Generic;
 
 public class RollValueDeciderScript : MonoBehaviour {
 	
-	public int currentValue;
+	public int currentValue; //This is public for viewing from the editor
 	private Dictionary<string,int> faceValues;
+	private GameObject diceThrower;
+	private float isAtRestTimer;
+	private bool bGotCollision = false;
+	private bool bReported = false;
 	
-	public void GotValueCollision(string faceName)
+	/// <summary>
+	/// Gots the value collision.
+	/// </summary>
+	/// <param name='faceName'>
+	/// Face name.
+	/// </param>
+	public void GotValue(string faceName)
 	{
-		Debug.Log(string.Format("Got Value Collision - {0}", faceName));
+		Debug.Log(string.Format("Got Value - {0}", faceName));
 		currentValue = faceValues[faceName];
+		bGotCollision = true;
+		isAtRestTimer = 0;
 	}
 	
+	/// <summary>
+	/// Determines whether this instance is at rest.
+	/// </summary>
+	/// <returns>
+	/// <c>true</c> if this instance is at rest; otherwise, <c>false</c>.
+	/// </returns>
 	public bool IsAtRest()
 	{
 		return rigidbody.IsSleeping();
 	}
 	
-	void Awake ()
+	void Update ()
+	{
+		// If we have hit the mat, and the die is not moving quickly
+		if(bGotCollision && !bReported)
+			isAtRestTimer += Time.deltaTime;
+		
+		if(3.0f < isAtRestTimer && !bReported)
+		{
+			Debug.Log("Reporting Result");
+			bReported = true;
+			Utilities().getDiceThrowerScript().DiceRolled(gameObject, currentValue);
+		}
+	}
+	
+	void OnEnable ()
 	{
 		currentValue = 0;
 		
@@ -41,7 +73,6 @@ public class RollValueDeciderScript : MonoBehaviour {
 		}
 		
 		// Start updward count of faces
-		
 		faceValues.Add("1", 1);
 		faceValues.Add("2", 2);
 		faceValues.Add("3", 3);
@@ -86,9 +117,13 @@ public class RollValueDeciderScript : MonoBehaviour {
 		
 		return;
 	}
-		
-	// Update is called once per frame
-	void FixedUpdate ()
+	
+	UtilitiesScript utilitiesScript;
+	UtilitiesScript Utilities()
 	{
+		if(null == utilitiesScript)
+			utilitiesScript = GameObject.Find("Utilities").GetComponent<UtilitiesScript>();
+		
+		return utilitiesScript;
 	}
 }

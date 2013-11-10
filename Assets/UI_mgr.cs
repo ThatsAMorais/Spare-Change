@@ -142,7 +142,7 @@ public class UI_mgr : MonoBehaviour {
 			
 			startPosition = startPosition + new Vector3(die.transform.localScale.x + 1, 0, 0);
 			
-			Camera.main.GetComponent<CamControl>().LookAtDice(die.transform);
+			//Camera.main.GetComponent<CamControl>().LookAtDice(die.transform);
 		}
 	}
 	

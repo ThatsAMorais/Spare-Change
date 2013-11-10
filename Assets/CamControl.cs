@@ -1,64 +1,154 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class CamControl : MonoBehaviour {
 	
 	public int camHeight = 12;
-	public Vector3 camPos;
-	public int posMax = 10;
-	public int posMin = -10;
-	public int htMax = 12;
-	public int htMin = 4;
+	public Vector3 cameraPosition;
+	public Vector3 initialPosition;
+	public static int posMax = 10;
+	public static int posMin = -10;
+	public static int htMax = 12;
+	public static int htMin = 4;
 	
-	Transform lookTarget;
+	bool bHasLookTarget = false;
 	float lookWait = 0.0f;
+	Dictionary<GameObject,Transform> camerasAndTargets;
+	Dictionary<int,List<Rect>> cameraRects;
 	
 	// Use this for initialization
-	void Start () {
-		camPos = gameObject.transform.localPosition;
+	void OnEnable () {
+		cameraPosition = gameObject.transform.localPosition;
+		initialPosition = cameraPosition;
+		
+		cameraRects = new Dictionary<int, List<Rect>>();
+		// One-die rects list
+		List<Rect> oneDie = new List<Rect>();
+		oneDie.Add(new Rect(0, 0, 1, 1));
+		cameraRects.Add(1,oneDie);
+		// Two-die rects list
+		List<Rect> twoDice = new List<Rect>();
+		twoDice.Add(new Rect(   0, 0, 0.5f, 1));
+		twoDice.Add(new Rect(0.5f, 0,    1, 1));
+		cameraRects.Add(2,twoDice);
+		// Three-die rects list
+		List<Rect> threeDice = new List<Rect>();
+		threeDice.Add(new Rect(   0,    0, 0.5f, 0.5f));
+		threeDice.Add(new Rect(0.5f,    0,    1, 0.5f));
+		threeDice.Add(new Rect(   0, 0.5f,    1,    1));
+		cameraRects.Add(3,threeDice);
+		// Four-die rects list
+		List<Rect> fourDice = new List<Rect>();
+		fourDice.Add(new Rect(   0,    0, 0.5f, 0.5f));
+		fourDice.Add(new Rect(0.5f,    0,    1, 0.5f));
+		fourDice.Add(new Rect(   0, 0.5f, 0.5f,    1));
+		fourDice.Add(new Rect(0.5f, 0.5f,    1,    1));
+		cameraRects.Add(4,fourDice);
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void Update ()
+	{
+		/*
 		// Camera scrolling
-		camPos.y = Mathf.Clamp(camPos.y + Input.GetAxis("Mouse ScrollWheel"), htMin, htMax);
+		cameraPosition.y = Mathf.Clamp(cameraPosition.y + Input.GetAxis("Mouse ScrollWheel"), htMin, htMax);
 		//gameObject.Find("Point light").light.intensity = camPos.y*0.2;
-		
+	
 		if(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
 		{
-			/* Camera movement */
-	    	camPos.x = Mathf.Clamp(camPos.x + Input.GetAxis("Mouse Y"), posMin, posMax);
-	    	camPos.z = Mathf.Clamp(camPos.z + Input.GetAxis("Mouse X"), posMin, posMax);
+			//Camera Movement
+	    	cameraPosition.x = Mathf.Clamp(cameraPosition.x + Input.GetAxis("Mouse Y"), posMin, posMax);
+	    	cameraPosition.z = Mathf.Clamp(cameraPosition.z + Input.GetAxis("Mouse X"), posMin, posMax);
 		}
 		
-		/*
-		if(!selectedGUITexture.HitTest(Input.mousePosition, Camera.main))
-		{
-			DoMousePicking();
-		}
+		Camera.main.transform.position = cameraPosition;
 		*/
 		
-		GameObject.Find("Main Camera").transform.position = camPos;
-		
-		
-		if(null != lookTarget)
+		if(true == bHasLookTarget)
 		{
-			lookWait += Time.deltaTime;
-			if(lookWait > 3.0f)
+			if(lookWait < 1.5f)
 			{
-				
-				
-		        /*camera.transform.position = new Vector3((lookTarget.position.x + 100),
-														(lookTarget.position.y + 100),
-														(lookTarget.position.z));*/
-				
-				transform.LookAt(lookTarget.position);
+				lookWait += Time.deltaTime;
 			}
+			else
+			{
+				foreach(GameObject cam in camerasAndTargets.Keys)
+				{
+					cam.transform.position = Vector3.MoveTowards(cam.transform.position,
+																 new Vector3((camerasAndTargets[cam].position.x),
+																		(camerasAndTargets[cam].position.y + 20),
+																		(camerasAndTargets[cam].position.z)),
+																 5*Time.deltaTime);
+					cam.transform.LookAt(camerasAndTargets[cam].position);
+				}
+			}
+		}
+		else
+		{
+			Vector3 diceBoxPosition = Utilities().getDiceBox().transform.position;
+			transform.position = Vector3.MoveTowards(transform.position,
+													 new Vector3(diceBoxPosition.x, diceBoxPosition.y + 20, diceBoxPosition.z),
+													 5*Time.deltaTime);
 		}
 	}
 	
-	public void LookAtDice(Transform die)
+	UtilitiesScript utilitiesScript;
+	UtilitiesScript Utilities()
 	{
-		lookTarget = die;
+		if(null == utilitiesScript)
+			utilitiesScript = GameObject.Find("Utilities").GetComponent<UtilitiesScript>();
+		
+		return utilitiesScript;
+	}
+	
+	public void LookAtDice(List<GameObject> dice)
+	{
+		int camCount = 0;
+		
+		if(true == bHasLookTarget || null == camerasAndTargets)
+		{
+			ResetCamera();
+		}
+		
+		foreach(GameObject die in dice)
+		{
+			GameObject newCam;
+			
+			if(0 == camCount)
+				newCam = gameObject;
+			else
+			{
+				newCam = new GameObject();
+				newCam.AddComponent<Camera>();
+			}
+			
+			newCam.camera.rect = cameraRects[dice.Count][camCount];
+			camerasAndTargets.Add(newCam, die.transform);
+			camCount++;
+		}
+		
+		bHasLookTarget = true;
+	}
+	
+	public void ResetCamera()
+	{
+		lookWait = 0;
+		bHasLookTarget = false;
+		
+		if(null != camerasAndTargets)
+		{
+			foreach(GameObject cam in camerasAndTargets.Keys)
+			{
+				if(cam.transform.name.Equals(cam.transform.name))
+				{
+					Debug.Log("Skipping the main camera");
+					continue;
+				}
+				GameObject.Destroy(cam);
+			}
+		}
+		
+		camerasAndTargets = new Dictionary<GameObject, Transform>();
 	}
 }

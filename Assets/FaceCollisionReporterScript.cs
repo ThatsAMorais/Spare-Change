@@ -7,11 +7,7 @@ public class FaceCollisionReporterScript : MonoBehaviour {
 	{
 		if(LayerMask.NameToLayer("Mat") == c.gameObject.layer)
 		{
-			Debug.Log(string.Format("Face Collision - {0}, {1}", name, c.gameObject.name));
-			SendMessageUpwards("GotValueCollision", name);
+			SendMessageUpwards("GotValue", name);
 		}
-		
 	}
-
-	
 }

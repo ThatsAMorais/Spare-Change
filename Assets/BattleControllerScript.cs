@@ -241,22 +241,59 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </summary>
 	class BattleRound
 	{
+		public static Roll ToHitRoll = new Roll("d20", 1);
+		
 		public enum State
 		{
 			SelectAction,
 			SelectTarget,
-			ToHitRolling,
-			DamageRolling,
+			Act,
 			Finished
 		}
 		
 		public State state {get;set;}
 		public BattleActor actor {get;set;}
+		public bool bIsPlayer {get;set;}
+		public bool bRolledChanceToHit {get;set;}
+		public bool bChanceToHitSuccess {get;set;}
+		public int numberOfDamageDiceStillRolling {get;set;}
+		public int rolledDamage {get;set;}
+		public List<GameObject> dice {get;set;}
+		public bool bActionSelected {get;set;}
+		public bool bTargetSelected {get;set;}
+		public bool bPlayerActed {get;set;}
+		public BattleAction selectedAction {get;set;}
+		public BattleActor selectedActor {get;set;}
 		
 		public BattleRound(BattleActor turnActor)
 		{
 			actor = turnActor;
 			state = State.SelectAction;
+			
+			bIsPlayer = (turnActor.GetType() == typeof(Character));
+			
+			bRolledChanceToHit = false;
+			bChanceToHitSuccess = false;
+			numberOfDamageDiceStillRolling = 0;
+			rolledDamage = 0;
+			bActionSelected = false;
+			bTargetSelected = false;
+			bPlayerActed = false;
+		}
+		
+		public void ClearDice()
+		{
+			if(null != dice)
+			{
+				foreach(GameObject die in dice)
+				{
+					GameObject.Destroy(die);
+				}
+			}
+			
+			dice = new List<GameObject>();
+			numberOfDamageDiceStillRolling = 0;
+			rolledDamage = 0;
 		}
 	}
 	
@@ -276,22 +313,30 @@ public class BattleControllerScript : MonoBehaviour {
 	
 	// Static
 	private static int GUI_SCREEN_BORDER = 15;
+	private static int GUI_TEXTFIELD_PAD = 25;
 	
 	// Private
 	List<BattleActor> enemies;
 	Character playerCharacter;
 	Dictionary<string,Weapon> weapons;
+	
+	// State of the entire game
 	GameState gameState;
-	Queue<BattleRound> queue;
+	
+	// TODO: Might be nice to see whats ahead
+	//Queue<BattleRound> queue;
+	
+	// Turn data
 	BattleRound currentTurn;
 	int roundCount;
 	Dictionary<string,int> battleActorTurnCounts;
+	
+	// GUI
 	int dieCount = 0;
+	string battleText;
+	Vector2 scrollPosition;
 	
-	BattleAction selectedAction;
-	BattleActor selectedActor;
-	
-	void Awake ()
+	void OnEnable ()
 	{
 		gameState = GameState.Title;  // TODO: This is where the game should eventually start
 		
@@ -317,141 +362,248 @@ public class BattleControllerScript : MonoBehaviour {
 		pistol.AddAttack(new Attack("Sideways Cocked", pistol, 1, -1));
 		weapons.Add(pistol.name, pistol);
 		/////////////
+		
+		battleText = "";
 	}
 	
-	void Update()
+	
+	void GUI_TitleScreen()
 	{
-
+		GUILayout.BeginVertical();
+		GUILayout.Box("Spare Change"); 		//TODO: Need a custom style for the title
+		GUILayout.Space(100);
+		//GUILayout.FlexibleSpace();
+		if(GUILayout.Button("Start Game")) 	// TODO: Need a custom style for the menu items
+		{
+			//TODO: Do some kind of transition to the next UI state
+			gameState = GameState.CharacterSelection;
+		}
+		GUILayout.EndVertical();
 	}
 	
+	void GUI_CharacterSelection()
+	{
+		GUILayout.BeginHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginVertical();
+		GUILayout.Box("Melee");
+		//TODO: Display an image below the title
+		if(GUILayout.Button("Select"))
+		{
+			SelectCharacter(Character.Type.Fighter);
+		}
+		GUILayout.EndVertical();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginVertical();
+		GUILayout.Box("Ranged");
+		//TODO: Display an image below the title
+		if(GUILayout.Button("Select"))
+		{
+			SelectCharacter(Character.Type.Shooter);
+		}
+		GUILayout.EndVertical();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.EndHorizontal();
+	}
+	
+	void GUI_BattleStart()
+	{
+		// Setup the queue for the next
+		GUILayout.BeginVertical();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginHorizontal();
+		foreach(BattleActor enemy in enemies)
+		{
+			GUILayout.Box(string.Format("{0}", enemy.name));
+		}
+		GUILayout.EndHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		if(GUILayout.Button("Start Battle"))
+		{
+			StartBattle();
+		}
+		GUILayout.FlexibleSpace();
+		GUILayout.EndHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginHorizontal();
+		GUILayout.Box(string.Format("{0}", playerCharacter.name));
+		GUILayout.EndHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.EndVertical();
+	}
+	
+	void GUI_BattleMode_enemyTurn()
+	{
+		GUILayout.Box(string.Format("{0}'s turn", currentTurn.actor.name));
+		////
+		GUILayout.FlexibleSpace();
+		////
+	}
+	
+	void GUI_BattleMode_playerSelectAction()
+	{
+		GUILayout.Box("Select an Action");
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginHorizontal();
+		GUI.enabled = !currentTurn.bActionSelected;
+		foreach(BattleAction action in currentTurn.actor.actions.Values)
+		{
+			if(GUILayout.Button(string.Format("{0}", action.name)))
+			{
+				currentTurn.bActionSelected = true;
+				SelectedAction(action.name);
+			}
+		}
+		GUI.enabled = true;
+		GUILayout.EndHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+	}
+	
+	void GUI_BattleMode_playerSelectTarget()
+	{
+		GUILayout.Box("Select a Target");
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.BeginHorizontal();
+		GUI.enabled = !currentTurn.bTargetSelected;
+		foreach(BattleActor enemy in enemies)
+		{
+			if(GUILayout.Button(string.Format("{0}", enemy.name)))
+			{
+				currentTurn.bTargetSelected = true;
+				// The action chosen will have an impact on who the possible targets can be
+				SelectedEnemy(enemy);
+			}
+		}
+		if(GUILayout.Button("Back"))
+		{
+			currentTurn.bActionSelected = false;
+			currentTurn.state = BattleRound.State.SelectAction;
+		}
+		GUI.enabled = true;
+		GUILayout.EndHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+	}
+	
+	void GUI_BattleMode_playerAct()
+	{
+		GUILayout.BeginHorizontal();
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUI.enabled = !currentTurn.bPlayerActed;
+		if(GUILayout.Button(string.Format("Roll {0}", (false == currentTurn.bRolledChanceToHit ? "-Chance to Hit-" : "-Damage-"))))
+		{
+			currentTurn.bPlayerActed = true;
+			PlayerActed();
+		}
+		GUI.enabled = true;
+		////
+		GUILayout.FlexibleSpace();
+		////
+		GUILayout.EndHorizontal();
+	}
+		
+	/// <summary>
+	/// Raises the GU event.
+	/// </summary>
 	void OnGUI()
 	{
 		GUI.skin = guiSkin;
+		////
 		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
 									 0 + GUI_SCREEN_BORDER,
 									 Screen.width - GUI_SCREEN_BORDER,
 									 Screen.height - GUI_SCREEN_BORDER));
-		switch(gameState)
 		{
-		case GameState.Title:
-			
-			GUILayout.BeginVertical();
-			GUILayout.Box("Spare Change"); 		//TODO: Need a custom style for the title
-			GUILayout.Space(100);
-			if(GUILayout.Button("Start Game")) 	// TODO: Need a custom style for the menu items
+			switch(gameState)
 			{
-				//TODO: Do some kind of transition to the next UI state
-				gameState = GameState.CharacterSelection;
-			}
-			GUILayout.EndVertical();
-			break;
-			
-		case GameState.CharacterSelection:
-			
-			GUILayout.BeginHorizontal();
-			
-			GUILayout.BeginVertical();
-			GUILayout.Box("Melee");
-			//TODO: Display an image below the title
-			if(GUILayout.Button("Select"))
-			{
-				SelectCharacter(Character.Type.Fighter);
-			}
-			GUILayout.EndVertical();
-			////
-			GUILayout.BeginVertical();
-			GUILayout.Box("Ranged");
-			//TODO: Display an image below the title
-			if(GUILayout.Button("Select"))
-			{
-				SelectCharacter(Character.Type.Fighter);
-			}
-			GUILayout.EndVertical();
-			GUILayout.EndHorizontal();
-			break;
-			
-		case GameState.BattleStart:
-			
-			// Setup the queue for the next
-			GUILayout.BeginVertical();
-			GUILayout.BeginHorizontal();
-			foreach(BattleActor enemy in enemies)
-			{
-				GUILayout.Box(string.Format("{0}", enemy.name));
-			}
-			GUILayout.EndHorizontal();
-			GUILayout.BeginHorizontal();
-			GUILayout.FlexibleSpace();
-			if(GUILayout.Button("Start Battle"))
-			{
-				StartBattle();
-			}
-			GUILayout.FlexibleSpace();
-			GUILayout.EndHorizontal();
-			GUILayout.BeginHorizontal();
-			GUILayout.Box(string.Format("{0}", playerCharacter.name));
-			GUILayout.EndHorizontal();
-			GUILayout.EndVertical();
-			break;
-			
-		case GameState.BattleMode:
-			
-			GUILayout.BeginVertical();
-			
-			switch(currentTurn.state)
-			{
-			case BattleRound.State.SelectAction:
+			case GameState.Title:
+				GUI_TitleScreen();
+				break;
 				
-				GUILayout.Box("Select an Action");
-				GUILayout.BeginHorizontal();
-				foreach(BattleAction action in currentTurn.actor.actions.Values)
+			case GameState.CharacterSelection:
+				GUI_CharacterSelection();
+				break;
+				
+			case GameState.BattleStart:
+				GUI_BattleStart();
+				break;
+			
+			case GameState.BattleMode:
+				
+				GUILayout.BeginVertical();
+				scrollPosition = GUILayout.BeginScrollView(scrollPosition);
+				GUILayout.Box(string.Format("{0}", battleText));
+				GUILayout.EndScrollView();
+				GUILayout.EndVertical();
+				////
+				GUILayout.Space(Screen.height*0.5f);
+				////
+				GUILayout.BeginVertical();
+				if(true == currentTurn.bIsPlayer)
 				{
-					if(GUILayout.Button(string.Format("{0}", action.name)))
+					switch(currentTurn.state)
 					{
-						SelectedAction(action.name);
+					case BattleRound.State.SelectAction:
+						GUI_BattleMode_playerSelectAction();
+						break;
+					
+					case BattleRound.State.SelectTarget:
+						GUI_BattleMode_playerSelectTarget();
+						break;
+						
+					case BattleRound.State.Act:
+						GUI_BattleMode_playerAct();
+						break;
 					}
 				}
-				GUILayout.EndHorizontal();
-				break;
-				
-			case BattleRound.State.SelectTarget:
-				GUILayout.Box("Select a Target");
-				GUILayout.BeginHorizontal();
-				// TODO: The action chosen will have an impact on who the possible targets can be
-				foreach(BattleActor enemy in enemies)
+				else
 				{
-					if(GUILayout.Button(string.Format("{0}", enemy.name)))
-					{
-						SelectedEnemy(enemy);
-					}
+					GUI_BattleMode_enemyTurn();
 				}
-				GUILayout.EndHorizontal();
+				GUILayout.EndVertical();
 				break;
 				
-			case BattleRound.State.ToHitRolling:
-				
-				break;
-				
-			case BattleRound.State.DamageRolling:
-				
-				break;
-				
-			case BattleRound.State.Finished:
+			case GameState.BattleOver:
 				
 				break;
 			}
-			
-			GUILayout.EndVertical();
-			break;
-			
-		case GameState.BattleOver:
-			
-			break;
-		}
-		
+		}	
 		GUILayout.EndArea();
 	}
 	
+	/// <summary>
+	/// Selects the character.
+	/// </summary>
+	/// <param name='type'>
+	/// Type.
+	/// </param>
 	private void SelectCharacter(Character.Type type)
 	{
 		switch(type)
@@ -473,6 +625,9 @@ public class BattleControllerScript : MonoBehaviour {
 		gameState = GameState.BattleStart;
 	}
 	
+	/// <summary>
+	/// Creates the enemies.
+	/// </summary>
 	private void CreateEnemies(/*TODO: options*/)
 	{
 		enemies = new List<BattleActor>();
@@ -490,6 +645,9 @@ public class BattleControllerScript : MonoBehaviour {
 									weapons["knife"]/*Weapon*/));
 	}
 	
+	/// <summary>
+	/// Starts the battle.
+	/// </summary>
 	private void StartBattle()
 	{
 		Debug.Log("Starting Battle Mode");
@@ -504,14 +662,26 @@ public class BattleControllerScript : MonoBehaviour {
 
 		//queue = new Queue<BattleRound>(); //Not in use, yet
 		
-		currentTurn = CalculateTurn();
-		ExecuteRound();
+		CalculateTurn();
 		
 		// Switch the gamestate
 		gameState = GameState.BattleMode;
+		
+		AppendBattleText(string.Format("{0} is engaged by some thugs...", playerCharacter.name));
+		foreach(BattleActor enemy in enemies)
+		{
+			AppendBattleText(string.Format("\t{0}", enemy.name));
+		}
+		AppendBattleText("Beat'em and make some ~change~!");
 	}
 	
-	private BattleRound CalculateTurn()
+	/// <summary>
+	/// Calculates the turn.
+	/// </summary>
+	/// <returns>
+	/// The turn.
+	/// </returns>
+	private void CalculateTurn()
 	{
 		BattleActor actorWithInitiative = playerCharacter;
 		
@@ -526,85 +696,190 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 		
 		roundCount += actorWithInitiative.speed;
-		return new BattleRound(actorWithInitiative);
-	}
-	
-	private void ExecuteRound()
-	{
-		Debug.Log(string.Format("round: {0}", roundCount));
-
-		// Process the current round
-		switch(currentTurn.state)
+		
+		// Set the current turn
+		currentTurn = new BattleRound(actorWithInitiative);
+		
+		if(!currentTurn.bIsPlayer)
 		{
-		case BattleRound.State.SelectAction:
-			Debug.Log(string.Format("Beginning of {0}'s turn", currentTurn.actor.name));
-			// Display choices
-			break;
-		case BattleRound.State.ToHitRolling:
-			// Sometimes this isn't necessary.
-			break;
-		case BattleRound.State.DamageRolling:
-			// There are two rolls, ToHit, and Damage
-			break;
-		case BattleRound.State.Finished:
-			
-			if(0 == enemies.Count)
-			{
-				gameState = GameState.BattleOver;
-			}
-			else {
-				currentTurn = CalculateTurn();
-			}
-			break;
+			DoEnemyTurn();
 		}
 	}
 	
+	void DoEnemyTurn()
+	{
+		List<string> keys = new List<string>(currentTurn.actor.actions.Keys);
+		SelectedAction(keys[Random.Range(0,currentTurn.actor.actions.Count)]);
+		
+		SelectedEnemy(playerCharacter);
+		
+		PlayerActed();
+	}
+	
+	/// <summary>
+	/// Selecteds the action.
+	/// </summary>
+	/// <param name='actionName'>
+	/// Action name.
+	/// </param>
 	void SelectedAction(string actionName)
 	{
-		selectedAction = currentTurn.actor.actions[actionName];
+		currentTurn.selectedAction = currentTurn.actor.actions[actionName];
 		currentTurn.state = BattleRound.State.SelectTarget;
 	}
 	
-	Transform diceBox;
-	Roll currentRoll;
-	bool bThrowingDice;
-	
-	Transform getDiceBox()
-	{
-		if(null == diceBox)
-			GameObject.Find("DiceBox");
-		
-		return diceBox;
-	}
-	
+	/// <summary>
+	/// Selecteds the enemy.
+	/// </summary>
+	/// <param name='actor'>
+	/// Actor.
+	/// </param>
 	void SelectedEnemy(BattleActor actor)
 	{
-		selectedActor = actor;
-		currentTurn.state = BattleRound.State.ToHitRolling;
+		currentTurn.selectedActor = actor;
+		currentTurn.state = BattleRound.State.Act;
 		
-		currentRoll = selectedAction.roll;
-		// Throw a dice corresponding to the action
-		// TODO: This call is just a mockup and doesn't do everything necessary to return a result
-		ThrowDice(currentRoll, getDiceBox());
+		AppendBattleText(string.Format("{0} uses {1} on {2}",
+						currentTurn.actor.name,
+						currentTurn.selectedAction.name,
+						currentTurn.selectedActor.name));
 	}
-
-	void ThrowDice(Roll roll, Transform diceBox)
-	{		
-		for(int d=0; d < roll.count; d++)
+	
+	/// <summary>
+	/// Players the acted.
+	/// </summary>
+	void PlayerActed()
+	{
+		if(false == currentTurn.bRolledChanceToHit)
 		{
-			GameObject die = CreateDie(roll.dieName);
-
-			transform.rotation = Quaternion.LookRotation(Random.onUnitSphere);
-			die.transform.position = 
-			die.rigidbody.velocity = Camera.main.transform.forward * -15 + Camera.main.transform.right * 8;
-			die.rigidbody.angularVelocity = Vector3.right * 25;
-			
-			startPosition = startPosition + new Vector3(die.transform.localScale.x + 1, 0, 0);
-			
-			//Camera.main.GetComponent<CamControl>().LookAtDice(die.transform);
+			ThrowDice(BattleRound.ToHitRoll, Utilities().getDiceBox().transform);
+		}
+		else if(true == currentTurn.bChanceToHitSuccess) {
+			ThrowDice(currentTurn.selectedAction.roll, Utilities().getDiceBox().transform);
 		}
 	}
 	
+	/// <summary>
+	/// Throws the dice.
+	/// </summary>
+	/// <param name='roll'>
+	/// Roll.
+	/// </param>
+	/// <param name='diceBox'>
+	/// Dice box.
+	/// </param>
+	void ThrowDice(Roll roll, Transform diceBox)
+	{
+		//TODO: Many a magic number in this function
+		
+		currentTurn.ClearDice();
+		
+		// Calculate the start position from the position of the box
+		Vector3 startPosition = new Vector3(diceBox.position.x - diceBox.localScale.x/2,
+											Camera.main.transform.position.y - ((diceBox.position.y - Camera.main.transform.position.y)*0.3f),
+											diceBox.position.z + diceBox.localScale.z/2);
+		
+		for(int d=0; d < roll.count; d++)
+		{
+			GameObject die = CreateDie(roll.dieName);
+			AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
+			
+			// Position
+			die.transform.position = startPosition;
+			die.rigidbody.velocity = Camera.main.transform.forward * -15 + Camera.main.transform.right * 8;
+			
+			// Orientation
+			die.transform.rotation = Quaternion.LookRotation(Random.onUnitSphere);
+			die.rigidbody.angularVelocity = Vector3.right * 25;
+			
+			// Collect the dice into a list
+			currentTurn.dice.Add(die);
+			currentTurn.numberOfDamageDiceStillRolling++;
+			
+			// Position subsequent dice adjacently
+			startPosition = startPosition + new Vector3(die.transform.localScale.x + 1, 0, 0);
+		}
+		
+		Camera.main.GetComponent<CamControl>().LookAtDice(currentTurn.dice);
+	}
+	
+	/// <summary>
+	/// Dices the rolled.
+	/// </summary>
+	/// <param name='die'>
+	/// Die.
+	/// </param>
+	/// <param name='rollValue'>
+	/// Roll value.
+	/// </param>
+	public void DiceRolled(GameObject die, int rollValue)
+	{
+		// The following logic is only for in the Act state
+		if(BattleRound.State.Act == currentTurn.state)
+		{
+			currentTurn.numberOfDamageDiceStillRolling--;
+			
+			// If a die roll comes back, bRolledChanceToHit is false, and its a d20,
+			//	==> this is the chance-to-hit result.
+			if(!currentTurn.bRolledChanceToHit && die.name.Contains("d20"))
+			{
+				currentTurn.bRolledChanceToHit = true;
+				
+				// Check if the rolled value was enough to hit the target
+				if(rollValue > 10)
+				{
+					AppendBattleText("Hit!");
+					// Hit was successful, roll for damage
+					currentTurn.bChanceToHitSuccess = true;
+					currentTurn.bPlayerActed = false;
+					
+					// If not the player, need to go ahead and act again
+					if(!currentTurn.bIsPlayer)
+					{
+						PlayerActed();
+					}
+				}
+				else
+				{
+					// Hit was unsuccessful, end turn
+					FinishTurn();
+				}
+			}
+			else if(true == currentTurn.bChanceToHitSuccess)
+			{
+				currentTurn.rolledDamage += rollValue;
+				
+				if(0 == currentTurn.numberOfDamageDiceStillRolling)
+				{
+					FinishTurn();
+				}
+			}
+		}
+	}
+	
+	void FinishTurn()
+	{
+		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
+		{
+			AppendBattleText(string.Format("{0} Damage to {1}", currentTurn.rolledDamage, currentTurn.selectedActor.name));
+		}
+		else
+		{
+			AppendBattleText("Missed");
+		}
+		
+		CalculateTurn();
+	}
+	
+	/// <summary>
+	/// Creates the die.
+	/// </summary>
+	/// <returns>
+	/// The die.
+	/// </returns>
+	/// <param name='dieName'>
+	/// Die name.
+	/// </param>
 	GameObject CreateDie(string dieName)
 	{
 		if(dieName.Equals("d4")){
@@ -642,11 +917,20 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 	}
 	
+	/// <summary>
+	/// Instantiates the die.
+	/// </summary>
+	/// <returns>
+	/// The die.
+	/// </returns>
+	/// <param name='diePrefab'>
+	/// Die prefab.
+	/// </param>
 	GameObject InstantiateDie(GameObject diePrefab)
 	{
 		GameObject newDie = Instantiate(diePrefab) as GameObject;
 		
-		newDie.name = string.Format("{0}_{1}", newDie.name, dieCount);
+		newDie.name = string.Format("{0} {1}", newDie.name.Replace("Clone", ""), dieCount);
 		
 		// Give it a random texture
 		newDie.renderer.materials = new Material[2] {DiceMats[Random.Range(0, DiceMats.Count)], DiceMats[Random.Range(0, DiceMats.Count)]};
@@ -656,4 +940,19 @@ public class BattleControllerScript : MonoBehaviour {
 		return newDie;
 	}
 	
+	UtilitiesScript utilitiesScript;
+	
+	UtilitiesScript Utilities()
+	{
+		if(null == utilitiesScript)
+			utilitiesScript = GameObject.Find("Utilities").GetComponent<UtilitiesScript>();
+		
+		return utilitiesScript;
+	}
+	
+	void AppendBattleText(string battleTextString)
+	{
+		//TODO: Could be good to add other decorations to the string
+		battleText += string.Format("\n{0}", battleTextString);
+	}
 }
