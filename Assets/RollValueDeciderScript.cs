@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class RollValueDeciderScript : MonoBehaviour {
 	
+	private static float AT_REST_TIMEOUT = 7.0f;
+	
 	public int currentValue; //This is public for viewing from the editor
 	private Dictionary<string,int> faceValues;
 	private GameObject diceThrower;
@@ -42,8 +44,9 @@ public class RollValueDeciderScript : MonoBehaviour {
 		if(bGotCollision && !bReported)
 			isAtRestTimer += Time.deltaTime;
 		
-		if(4.0f < isAtRestTimer && !bReported)
+		if(AT_REST_TIMEOUT < isAtRestTimer && !bReported)
 		{
+			isAtRestTimer = 0;
 			Debug.Log("Reporting Result");
 			bReported = true;
 			Utilities().getDiceThrowerScript().DiceRolled(gameObject, currentValue);

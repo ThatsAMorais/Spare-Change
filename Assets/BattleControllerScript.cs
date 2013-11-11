@@ -108,9 +108,13 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		public string name {get;set;}
 		public int health {get;set;}
+		public int remainingHealth {get;set;}
 		public int speed {get;set;}
 		public int defense {get;set;}
 		public Weapon weapon {get;set;}
+		public double experienceValue {get;set;}
+		public double changeValue {get;set;}
+		
 		public Dictionary<string,BattleAction> actions
 		{
 			get // Return all actions, including the weapon actions
@@ -131,13 +135,17 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 		private List<BattleAction> actionList;
 		
-		public BattleActor(string theName, int theHealth, int theSpeed, int theDefense, Weapon theWeapon)
+		public BattleActor(string theName, int theHealth, int theSpeed, int theDefense, Weapon theWeapon,
+							double expVal, double changeVal)
 		{
 			name = theName;
 			health = theHealth;
+			remainingHealth = health;
 			speed = theSpeed;
 			defense = theDefense;
 			weapon = theWeapon;
+			experienceValue = expVal;
+			changeValue = changeVal;
 			
 			actionList = new List<BattleAction>();
 		}
@@ -194,18 +202,18 @@ public class BattleControllerScript : MonoBehaviour {
 		public Inventory inventory;
 		
 		public Character(string theName, int theHealth, int theSpeed, int theDefense, Weapon theWeapon)
-		: base(theName, theHealth, theSpeed, theDefense, theWeapon)
+		: base(theName, theHealth, theSpeed, theDefense, theWeapon, 0, 0)
 		{
 			inventory = new Inventory();
 			inventory.AddWeapon(theWeapon);
 		}
 		
-		public void AddChange(int amountOfChange)
+		public void AddChange(double amountOfChange)
 		{
 			inventory.change += amountOfChange;
 		}
 		
-		public void AddExperience(int amountOfExp)
+		public void AddExperience(double amountOfExp)
 		{
 			inventory.xp += amountOfExp;
 		}
@@ -264,7 +272,7 @@ public class BattleControllerScript : MonoBehaviour {
 		public bool bTargetSelected {get;set;}
 		public bool bPlayerActed {get;set;}
 		public BattleAction selectedAction {get;set;}
-		public BattleActor selectedActor {get;set;}
+		public BattleActor targetedActor {get;set;}
 		
 		public BattleRound(BattleActor turnActor)
 		{
@@ -373,51 +381,54 @@ public class BattleControllerScript : MonoBehaviour {
 	void GUI_TitleScreen()
 	{
 		GUILayout.BeginVertical();
-		GUILayout.Box("Spare Change"); 		//TODO: Need a custom style for the title
+		GUILayout.Box("Spare Change", "TitleBox"); 		//TODO: Need a custom style for the title
 		GUILayout.Space(100);
 		//GUILayout.FlexibleSpace();
-		if(GUILayout.Button("Start Game")) 	// TODO: Need a custom style for the menu items
+		if(GUILayout.Button("Start a New Guy")) 	// TODO: Need a custom style for the menu items
 		{
 			//TODO: Do some kind of transition to the next UI state
 			gameState = GameState.CharacterSelection;
 		}
+		GUI.enabled = false;
+		if(GUILayout.Button("Load Existing")) 	// TODO: Need a custom style for the menu items
+		{
+			//TODO: Do some kind of transition to the next UI state
+			gameState = GameState.CharacterSelection;
+		}
+		GUI.enabled = true;
 		GUILayout.EndVertical();
 	}
 	
 	void GUI_CharacterSelection()
 	{
 		GUILayout.BeginHorizontal();
-		////
-		GUILayout.FlexibleSpace();
-		////
+		
+		
 		GUILayout.BeginVertical();
-		////
-		GUILayout.FlexibleSpace();
-		////
+		GUILayout.Space(20);
 		GUILayout.Box("Melee");
 		//TODO: Display an image below the title
+		GUILayout.Box("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		if(GUILayout.Button("Select"))
 		{
 			SelectCharacter(Character.Type.Fighter);
 		}
+		GUILayout.Space(20);
 		GUILayout.EndVertical();
-		////
-		GUILayout.FlexibleSpace();
-		////
+		
 		GUILayout.BeginVertical();
-		////
-		GUILayout.FlexibleSpace();
-		////
+		GUILayout.Space(20);
 		GUILayout.Box("Ranged");
 		//TODO: Display an image below the title
+		GUILayout.Box("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		if(GUILayout.Button("Select"))
 		{
 			SelectCharacter(Character.Type.Shooter);
 		}
+		GUILayout.Space(20);
 		GUILayout.EndVertical();
-		////
-		GUILayout.FlexibleSpace();
-		////
+		
+		
 		GUILayout.EndHorizontal();
 	}
 	
@@ -526,11 +537,7 @@ public class BattleControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 		////
 		GUI.enabled = !currentTurn.bPlayerActed;
-		if(GUILayout.Button(string.Format("Roll {0}", (false == currentTurn.bRolledChanceToHit ? "-Chance to Hit-" : "-Damage-"))))
-		{
-			currentTurn.bPlayerActed = true;
-			PlayerActed();
-		}
+		GUILayout.Box(string.Format("Rolling {0}", (false == currentTurn.bRolledChanceToHit ? "-Chance to Hit-" : "-Damage-")));
 		GUI.enabled = true;
 		////
 		GUILayout.FlexibleSpace();
@@ -593,6 +600,15 @@ public class BattleControllerScript : MonoBehaviour {
 		GUILayout.EndVertical();
 	}
 	
+	void GUI_BattleOver()
+	{
+		GUILayout.BeginVertical();
+		GUILayout.Box("Battle Over", "TitleBox"); 		//TODO: Need a custom style for the title
+		GUILayout.Box(string.Format("{0} is the victor",
+									(playerCharacter.remainingHealth > 0 ? playerCharacter.name : "The Enemy")));
+		GUILayout.EndVertical();
+	}
+	
 	/// <summary>
 	/// Raises the GU event.
 	/// </summary>
@@ -624,7 +640,7 @@ public class BattleControllerScript : MonoBehaviour {
 				break;
 				
 			case GameState.BattleOver:
-				
+				GUI_BattleOver();
 				break;
 			}
 		}	
@@ -669,13 +685,17 @@ public class BattleControllerScript : MonoBehaviour {
 									20/*Health*/,
 									8/*Speed*/,
 									6/*Defense*/,
-									weapons["bat"]/*Weapon*/));
+									weapons["bat"]/*Weapon*/,
+									5,
+									15));
 		// Stabby //
 		enemies.Add(new BattleActor("Stabby"/*Name*/,
 									14/*Health*/,
 									6/*Speed*/,
 									4/*Defense*/,
-									weapons["knife"]/*Weapon*/));
+									weapons["knife"]/*Weapon*/,
+									4,
+									10));
 	}
 	
 	private static int BATTLE_QUEUE_MAX = 5;
@@ -719,8 +739,6 @@ public class BattleControllerScript : MonoBehaviour {
 	
 	private bool goToNextTurn = false;
 	private float nextTurnDelay = 0;
-	private bool reRoll;
-	private Roll reRollRoll;
 	void Update()
 	{
 		if(goToNextTurn)
@@ -734,11 +752,6 @@ public class BattleControllerScript : MonoBehaviour {
 			nextTurnDelay = 0;
 			goToNextTurn = false;
 			switchToNextTurnInQueue();
-		}
-		
-		if(true == reRoll)
-		{
-			ThrowDice(reRollRoll);
 		}
 	}
 			
@@ -827,13 +840,15 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </param>
 	void SelectedEnemy(BattleActor actor)
 	{
-		currentTurn.selectedActor = actor;
+		currentTurn.targetedActor = actor;
 		currentTurn.state = BattleRound.State.Act;
 		
 		AppendBattleText(string.Format("{0} uses {1} on {2}",
 						currentTurn.actor.name,
 						currentTurn.selectedAction.name,
-						currentTurn.selectedActor.name));
+						currentTurn.targetedActor.name));
+		
+		PlayerActed();
 	}
 	
 	/// <summary>
@@ -845,7 +860,8 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			ThrowDice(BattleRound.ToHitRoll);
 		}
-		else if(true == currentTurn.bChanceToHitSuccess) {
+		else if(true == currentTurn.bChanceToHitSuccess)
+		{
 			ThrowDice(currentTurn.selectedAction.roll);
 		}
 	}
@@ -876,15 +892,6 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			GameObject die = CreateDie(roll.dieName);
 			AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
-			
-			//TODO: This is just a kludge...
-			if(null == die)
-			{
-				reRoll = true;
-				reRollRoll = roll;
-				Debug.Log("something messed up when rolling the dice.");
-				return;
-			}
 			
 			// Position
 			die.transform.position = startPosition;
@@ -931,16 +938,12 @@ public class BattleControllerScript : MonoBehaviour {
 				// Check if the rolled value was enough to hit the target
 				if(rollValue > 10)
 				{
-					AppendBattleText("Hit!");
+					AppendBattleText("Result > 10 - Hit!");
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
 					currentTurn.bPlayerActed = false;
 					
-					// If not the player, need to go ahead and act again
-					if(!currentTurn.bIsPlayer)
-					{
-						PlayerActed();
-					}
+					PlayerActed();
 				}
 				else
 				{
@@ -967,7 +970,30 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
 		{
-			AppendBattleText(string.Format("{0} Damage to {1}", currentTurn.rolledDamage, currentTurn.selectedActor.name));
+			currentTurn.targetedActor.remainingHealth -= currentTurn.rolledDamage;
+			
+			if(0 >= playerCharacter.remainingHealth)
+			{
+				// Gameover man...
+				gameState = GameState.BattleOver;
+			}
+			
+			foreach(BattleActor enemy in enemies)
+			{
+				if(0 >= enemy.remainingHealth)
+				{
+					playerCharacter.AddExperience(enemy.experienceValue);
+					playerCharacter.AddChange(enemy.changeValue);
+					enemies.Remove(currentTurn.targetedActor);
+				}
+			}
+			
+			if(0 == enemies.Count)
+			{
+				gameState = GameState.BattleOver;
+			}
+			
+			AppendBattleText(string.Format("{0} Damage to {1}", currentTurn.rolledDamage, currentTurn.targetedActor.name));
 		}
 		else
 		{
@@ -991,17 +1017,12 @@ public class BattleControllerScript : MonoBehaviour {
 		if(dieName.Equals("d4")){
 			return InstantiateDie(d4);
 		}
-		else if(dieName.Equals("d6_s_p")) {
-			return InstantiateDie(d6_s_p);
-		}
-		else if(dieName.Equals("d6_s_d")) {
+		else if(dieName.Equals("d6"))
+		{
+			//return InstantiateDie(d6_s_p);
 			return InstantiateDie(d6_s_d);
-		}
-		else if(dieName.Equals("d6_r_p")) {
-			return InstantiateDie(d6_r_p);
-		}
-		else if(dieName.Equals("d6_r_d")) {
-			return InstantiateDie(d6_r_d);
+			//return InstantiateDie(d6_r_p);
+			//return InstantiateDie(d6_r_d);
 		}
 		else if(dieName.Equals("d8")) {
 			return InstantiateDie(d8);

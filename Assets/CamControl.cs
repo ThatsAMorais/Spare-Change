@@ -91,7 +91,7 @@ public class CamControl : MonoBehaviour {
 			Vector3 diceBoxPosition = Utilities().getDiceBox().transform.position;
 			transform.position = Vector3.MoveTowards(transform.position,
 													 new Vector3(diceBoxPosition.x,
-																 diceBoxPosition.y + 150,
+																 diceBoxPosition.y + 180,
 																 diceBoxPosition.z),
 													 10*Time.deltaTime);
 		}
