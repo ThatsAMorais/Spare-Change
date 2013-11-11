@@ -135,6 +135,7 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			name = theName;
 			health = theHealth;
+			speed = theSpeed;
 			defense = theDefense;
 			weapon = theWeapon;
 			
@@ -294,6 +295,8 @@ public class BattleControllerScript : MonoBehaviour {
 			dice = new List<GameObject>();
 			numberOfDamageDiceStillRolling = 0;
 			rolledDamage = 0;
+			
+			Camera.main.GetComponent<CamControl>().ResetCamera();
 		}
 	}
 	
@@ -323,10 +326,8 @@ public class BattleControllerScript : MonoBehaviour {
 	// State of the entire game
 	GameState gameState;
 	
-	// TODO: Might be nice to see whats ahead
-	//Queue<BattleRound> queue;
-	
 	// Turn data
+	Queue<BattleRound> queue;
 	BattleRound currentTurn;
 	int roundCount;
 	Dictionary<string,int> battleActorTurnCounts;
@@ -336,10 +337,14 @@ public class BattleControllerScript : MonoBehaviour {
 	string battleText;
 	Vector2 scrollPosition;
 	
+	void Awake ()
+	{
+		gameState = GameState.Title;
+		battleText = "";
+	}
+	
 	void OnEnable ()
 	{
-		gameState = GameState.Title;  // TODO: This is where the game should eventually start
-		
 		// pre-create some weapons
 		weapons = new Dictionary<string, Weapon>();
 		
@@ -362,8 +367,6 @@ public class BattleControllerScript : MonoBehaviour {
 		pistol.AddAttack(new Attack("Sideways Cocked", pistol, 1, -1));
 		weapons.Add(pistol.name, pistol);
 		/////////////
-		
-		battleText = "";
 	}
 	
 	
@@ -388,6 +391,9 @@ public class BattleControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 		////
 		GUILayout.BeginVertical();
+		////
+		GUILayout.FlexibleSpace();
+		////
 		GUILayout.Box("Melee");
 		//TODO: Display an image below the title
 		if(GUILayout.Button("Select"))
@@ -399,6 +405,9 @@ public class BattleControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 		////
 		GUILayout.BeginVertical();
+		////
+		GUILayout.FlexibleSpace();
+		////
 		GUILayout.Box("Ranged");
 		//TODO: Display an image below the title
 		if(GUILayout.Button("Select"))
@@ -528,7 +537,62 @@ public class BattleControllerScript : MonoBehaviour {
 		////
 		GUILayout.EndHorizontal();
 	}
+	
+	void GUI_BattleText()
+	{
+		GUILayout.BeginHorizontal();
 		
+		GUILayout.Space(GUI_TEXTFIELD_PAD);
+		
+		scrollPosition = GUILayout.BeginScrollView(scrollPosition);
+		GUILayout.Label(string.Format("{0}", battleText));
+		GUILayout.EndScrollView();
+		
+		GUILayout.Space(GUI_TEXTFIELD_PAD);
+		
+		GUILayout.EndHorizontal();
+	}
+	
+	void GUI_BattleMode()
+	{
+		GUILayout.BeginVertical();
+		GUI_BattleText();
+		////
+		GUILayout.Space(Screen.height*0.5f);
+		////
+		
+		if(null != currentTurn)
+		{
+			if(true == currentTurn.bIsPlayer)
+			{
+				switch(currentTurn.state)
+				{
+				case BattleRound.State.SelectAction:
+					GUI_BattleMode_playerSelectAction();
+					break;
+				
+				case BattleRound.State.SelectTarget:
+					GUI_BattleMode_playerSelectTarget();
+					break;
+					
+				case BattleRound.State.Act:
+					GUI_BattleMode_playerAct();
+					break;
+				}
+			}
+			else
+			{
+				GUI_BattleMode_enemyTurn();
+			}
+		}
+		else
+		{
+			GUILayout.Label("Queueing Next Turn");
+		}
+		
+		GUILayout.EndVertical();
+	}
+	
 	/// <summary>
 	/// Raises the GU event.
 	/// </summary>
@@ -556,38 +620,7 @@ public class BattleControllerScript : MonoBehaviour {
 				break;
 			
 			case GameState.BattleMode:
-				
-				GUILayout.BeginVertical();
-				scrollPosition = GUILayout.BeginScrollView(scrollPosition);
-				GUILayout.Box(string.Format("{0}", battleText));
-				GUILayout.EndScrollView();
-				GUILayout.EndVertical();
-				////
-				GUILayout.Space(Screen.height*0.5f);
-				////
-				GUILayout.BeginVertical();
-				if(true == currentTurn.bIsPlayer)
-				{
-					switch(currentTurn.state)
-					{
-					case BattleRound.State.SelectAction:
-						GUI_BattleMode_playerSelectAction();
-						break;
-					
-					case BattleRound.State.SelectTarget:
-						GUI_BattleMode_playerSelectTarget();
-						break;
-						
-					case BattleRound.State.Act:
-						GUI_BattleMode_playerAct();
-						break;
-					}
-				}
-				else
-				{
-					GUI_BattleMode_enemyTurn();
-				}
-				GUILayout.EndVertical();
+				GUI_BattleMode();
 				break;
 				
 			case GameState.BattleOver:
@@ -645,6 +678,8 @@ public class BattleControllerScript : MonoBehaviour {
 									weapons["knife"]/*Weapon*/));
 	}
 	
+	private static int BATTLE_QUEUE_MAX = 5;
+	
 	/// <summary>
 	/// Starts the battle.
 	/// </summary>
@@ -654,15 +689,21 @@ public class BattleControllerScript : MonoBehaviour {
 
 		roundCount = 0;
 		battleActorTurnCounts = new Dictionary<string, int>();
-		battleActorTurnCounts.Add(playerCharacter.name, 0);
+		battleActorTurnCounts.Add(playerCharacter.name, 1);
 		foreach(BattleActor enemy in enemies)
 		{
-			battleActorTurnCounts.Add(enemy.name, 0);
+			battleActorTurnCounts.Add(enemy.name, 1);
 		}
 
-		//queue = new Queue<BattleRound>(); //Not in use, yet
+		queue = new Queue<BattleRound>(); //Not in use, yet
 		
-		CalculateTurn();
+		for(int i=0; i < BATTLE_QUEUE_MAX; i++)
+		{
+			CalculateTurn();
+		}
+		
+		// Start the first turn of the battle
+		NextTurn();
 		
 		// Switch the gamestate
 		gameState = GameState.BattleMode;
@@ -673,6 +714,53 @@ public class BattleControllerScript : MonoBehaviour {
 			AppendBattleText(string.Format("\t{0}", enemy.name));
 		}
 		AppendBattleText("Beat'em and make some ~change~!");
+		
+	}
+	
+	private bool goToNextTurn = false;
+	private float nextTurnDelay = 0;
+	private bool reRoll;
+	private Roll reRollRoll;
+	void Update()
+	{
+		if(goToNextTurn)
+		{
+			Debug.Log("Next-Turn-Delay Tick");
+			nextTurnDelay += Time.deltaTime;
+		}
+		
+		if((1 < nextTurnDelay) && goToNextTurn)
+		{
+			nextTurnDelay = 0;
+			goToNextTurn = false;
+			switchToNextTurnInQueue();
+		}
+		
+		if(true == reRoll)
+		{
+			ThrowDice(reRollRoll);
+		}
+	}
+			
+	private void NextTurn()
+	{
+		goToNextTurn = true;
+		Debug.Log("Going to next turn...");
+	}
+	
+	private void switchToNextTurnInQueue()
+	{
+		BattleRound nextRound = queue.Dequeue();
+		if(null != currentTurn)
+			nextRound.dice = currentTurn.dice;
+		currentTurn = nextRound;
+		CalculateTurn();
+		
+		if(!currentTurn.bIsPlayer)
+		{
+			Debug.Log(string.Format("{0}'s turn", currentTurn.actor.name));
+			DoEnemyTurn();
+		}
 	}
 	
 	/// <summary>
@@ -695,25 +783,28 @@ public class BattleControllerScript : MonoBehaviour {
 			}
 		}
 		
+		battleActorTurnCounts[actorWithInitiative.name]++;
+		
 		roundCount += actorWithInitiative.speed;
 		
-		// Set the current turn
-		currentTurn = new BattleRound(actorWithInitiative);
-		
-		if(!currentTurn.bIsPlayer)
-		{
-			DoEnemyTurn();
-		}
+		// Enqueue this turn
+		queue.Enqueue(new BattleRound(actorWithInitiative));
 	}
 	
+	/// <summary>
+	/// Dos the enemy turn.
+	/// </summary>
 	void DoEnemyTurn()
 	{
+		AppendBattleText("Enemy Turn");
 		List<string> keys = new List<string>(currentTurn.actor.actions.Keys);
+		AppendBattleText("Selecting an Action");
 		SelectedAction(keys[Random.Range(0,currentTurn.actor.actions.Count)]);
-		
+		AppendBattleText("Directing it at the character");
 		SelectedEnemy(playerCharacter);
-		
+		AppendBattleText("Enemy Attacking");
 		PlayerActed();
+		AppendBattleText("Acted");
 	}
 	
 	/// <summary>
@@ -752,10 +843,10 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		if(false == currentTurn.bRolledChanceToHit)
 		{
-			ThrowDice(BattleRound.ToHitRoll, Utilities().getDiceBox().transform);
+			ThrowDice(BattleRound.ToHitRoll);
 		}
 		else if(true == currentTurn.bChanceToHitSuccess) {
-			ThrowDice(currentTurn.selectedAction.roll, Utilities().getDiceBox().transform);
+			ThrowDice(currentTurn.selectedAction.roll);
 		}
 	}
 	
@@ -768,9 +859,11 @@ public class BattleControllerScript : MonoBehaviour {
 	/// <param name='diceBox'>
 	/// Dice box.
 	/// </param>
-	void ThrowDice(Roll roll, Transform diceBox)
+	void ThrowDice(Roll roll)
 	{
 		//TODO: Many a magic number in this function
+		
+		Transform diceBox = Utilities().getDiceBox().transform;
 		
 		currentTurn.ClearDice();
 		
@@ -783,6 +876,15 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			GameObject die = CreateDie(roll.dieName);
 			AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
+			
+			//TODO: This is just a kludge...
+			if(null == die)
+			{
+				reRoll = true;
+				reRollRoll = roll;
+				Debug.Log("something messed up when rolling the dice.");
+				return;
+			}
 			
 			// Position
 			die.transform.position = startPosition;
@@ -814,6 +916,7 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </param>
 	public void DiceRolled(GameObject die, int rollValue)
 	{
+		Debug.Log("Got Dice Value Report");
 		// The following logic is only for in the Act state
 		if(BattleRound.State.Act == currentTurn.state)
 		{
@@ -857,6 +960,9 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 	}
 	
+	/// <summary>
+	/// Finishs the turn.
+	/// </summary>
 	void FinishTurn()
 	{
 		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
@@ -868,7 +974,7 @@ public class BattleControllerScript : MonoBehaviour {
 			AppendBattleText("Missed");
 		}
 		
-		CalculateTurn();
+		NextTurn();
 	}
 	
 	/// <summary>
@@ -932,8 +1038,15 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		newDie.name = string.Format("{0} {1}", newDie.name.Replace("Clone", ""), dieCount);
 		
+		Material mat1 = DiceMats[Random.Range(0, DiceMats.Count)];
+		Material mat2 = DiceMats[Random.Range(0, DiceMats.Count)];
+		while (mat1 == mat2) // Don't let them be identical
+		{
+			mat2 = DiceMats[Random.Range(0, DiceMats.Count)];
+		}
+		
 		// Give it a random texture
-		newDie.renderer.materials = new Material[2] {DiceMats[Random.Range(0, DiceMats.Count)], DiceMats[Random.Range(0, DiceMats.Count)]};
+		newDie.renderer.materials = new Material[2] {mat1, mat2};
 		
 		dieCount++;
 		
@@ -954,5 +1067,7 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		//TODO: Could be good to add other decorations to the string
 		battleText += string.Format("\n{0}", battleTextString);
+		
+		//scrollPosition.y = Mathf.Infinity;
 	}
 }

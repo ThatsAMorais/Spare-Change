@@ -67,8 +67,6 @@ public class UI_mgr : MonoBehaviour {
 	
 	Throws throws = new Throws();
 	
-	private bool bReadyToThrow = false;
-	private bool bStartTargetSet = false;
 	private Throw lastThrow;
 	
 	// Use this for initialization
@@ -118,7 +116,6 @@ public class UI_mgr : MonoBehaviour {
 			newThrow.Add(diceType);
 		}
 		throws.Add(newThrow);
-		bReadyToThrow = true;
 	}
 	
 	void ThrowDice(Throw dieThrow, Vector3 startPosition, Vector3 endPosition)
@@ -199,9 +196,6 @@ public class UI_mgr : MonoBehaviour {
 	}
 	
 	private int diceQuantity = 1;
-	private static int DICE_QUANTITY_MAX = 10;
-	private static int DICE_QUANTITY_MIN = 1;
-	
 	
 	void OnGUI() {
 		GUILayout.BeginArea(GUIButtonRect());

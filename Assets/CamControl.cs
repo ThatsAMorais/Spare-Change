@@ -76,10 +76,12 @@ public class CamControl : MonoBehaviour {
 				foreach(GameObject cam in camerasAndTargets.Keys)
 				{
 					cam.transform.position = Vector3.MoveTowards(cam.transform.position,
-																 new Vector3((camerasAndTargets[cam].position.x),
+																 new Vector3(
+																		(camerasAndTargets[cam].position.x + 5),
 																		(camerasAndTargets[cam].position.y + 20),
 																		(camerasAndTargets[cam].position.z)),
-																 5*Time.deltaTime);
+																 10*Time.deltaTime);
+					
 					cam.transform.LookAt(camerasAndTargets[cam].position);
 				}
 			}
@@ -88,8 +90,10 @@ public class CamControl : MonoBehaviour {
 		{
 			Vector3 diceBoxPosition = Utilities().getDiceBox().transform.position;
 			transform.position = Vector3.MoveTowards(transform.position,
-													 new Vector3(diceBoxPosition.x, diceBoxPosition.y + 20, diceBoxPosition.z),
-													 5*Time.deltaTime);
+													 new Vector3(diceBoxPosition.x,
+																 diceBoxPosition.y + 150,
+																 diceBoxPosition.z),
+													 10*Time.deltaTime);
 		}
 	}
 	
@@ -106,7 +110,7 @@ public class CamControl : MonoBehaviour {
 	{
 		int camCount = 0;
 		
-		if(true == bHasLookTarget || null == camerasAndTargets)
+		//if(true == bHasLookTarget || null == camerasAndTargets)
 		{
 			ResetCamera();
 		}
@@ -116,10 +120,14 @@ public class CamControl : MonoBehaviour {
 			GameObject newCam;
 			
 			if(0 == camCount)
+			{
 				newCam = gameObject;
+				newCam.name = string.Format("Main Dice Cam {0}", die.name);
+			}
 			else
 			{
 				newCam = new GameObject();
+				newCam.name = string.Format("Secondary Dice Cam {0}", die.name);
 				newCam.AddComponent<Camera>();
 			}
 			
@@ -140,15 +148,18 @@ public class CamControl : MonoBehaviour {
 		{
 			foreach(GameObject cam in camerasAndTargets.Keys)
 			{
-				if(cam.transform.name.Equals(cam.transform.name))
+				if(cam.transform.name.Contains("Main"))
 				{
 					Debug.Log("Skipping the main camera");
 					continue;
 				}
+				Debug.Log("Destroying secondary camera");
 				GameObject.Destroy(cam);
 			}
 		}
 		
+		camera.rect = cameraRects[1][0];
+		camera.transform.name = "Main Camera";
 		camerasAndTargets = new Dictionary<GameObject, Transform>();
 	}
 }

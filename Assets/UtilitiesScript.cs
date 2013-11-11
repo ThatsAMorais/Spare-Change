@@ -39,5 +39,4 @@ public class UtilitiesScript : MonoBehaviour {
 		
 		return diceThrowerScript;
 	}
-	
 }

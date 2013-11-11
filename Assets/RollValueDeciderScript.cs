@@ -42,7 +42,7 @@ public class RollValueDeciderScript : MonoBehaviour {
 		if(bGotCollision && !bReported)
 			isAtRestTimer += Time.deltaTime;
 		
-		if(3.0f < isAtRestTimer && !bReported)
+		if(4.0f < isAtRestTimer && !bReported)
 		{
 			Debug.Log("Reporting Result");
 			bReported = true;
