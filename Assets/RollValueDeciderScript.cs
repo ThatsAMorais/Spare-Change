@@ -3,15 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class RollValueDeciderScript : MonoBehaviour {
-	
-	private static float AT_REST_TIMEOUT = 7.0f;
-	
+		
 	public int currentValue; //This is public for viewing from the editor
 	private Dictionary<string,int> faceValues;
 	private GameObject diceThrower;
-	private float isAtRestTimer;
-	private bool bGotCollision = false;
+	private Vector3 lastPosition;
+	private bool bGotValue = false;
 	private bool bReported = false;
+	private float dicePositionCheckTimer = 0.0f;
+	private static float DICE_POSITION_CHECK_TIMEOUT = 3f;
 	
 	/// <summary>
 	/// Gots the value collision.
@@ -23,38 +23,29 @@ public class RollValueDeciderScript : MonoBehaviour {
 	{
 		Debug.Log(string.Format("Got Value - {0}", faceName));
 		currentValue = faceValues[faceName];
-		bGotCollision = true;
-		isAtRestTimer = 0;
-	}
-	
-	/// <summary>
-	/// Determines whether this instance is at rest.
-	/// </summary>
-	/// <returns>
-	/// <c>true</c> if this instance is at rest; otherwise, <c>false</c>.
-	/// </returns>
-	public bool IsAtRest()
-	{
-		return rigidbody.IsSleeping();
+		bGotValue = true;
 	}
 	
 	void Update ()
 	{
-		// If we have hit the mat, and the die is not moving quickly
-		if(bGotCollision && !bReported)
-			isAtRestTimer += Time.deltaTime;
-		
-		if(AT_REST_TIMEOUT < isAtRestTimer && !bReported)
+		if((true == bGotValue) && (false == bReported))
 		{
-			isAtRestTimer = 0;
-			Debug.Log("Reporting Result");
-			bReported = true;
-			Utilities().getDiceThrowerScript().DiceRolled(gameObject, currentValue);
+			dicePositionCheckTimer += Time.deltaTime;
+			
+			if((DICE_POSITION_CHECK_TIMEOUT <= dicePositionCheckTimer) && (lastPosition == transform.position))
+			{
+				dicePositionCheckTimer = 0;
+				Debug.Log("Reporting Result");
+				bReported = true;
+				Utilities().getDiceThrowerScript().DiceRolled(gameObject, currentValue);
+			}
 		}
+		lastPosition = transform.position;
 	}
 	
 	void OnEnable ()
 	{
+		bReported = false;
 		currentValue = 0;
 		
 		// Do other initializations above this stuff

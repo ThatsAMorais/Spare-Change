@@ -77,10 +77,10 @@ public class CamControl : MonoBehaviour {
 				{
 					cam.transform.position = Vector3.MoveTowards(cam.transform.position,
 																 new Vector3(
-																		(camerasAndTargets[cam].position.x + 5),
-																		(camerasAndTargets[cam].position.y + 20),
+																		(camerasAndTargets[cam].position.x + 20),
+																		(camerasAndTargets[cam].position.y + 30),
 																		(camerasAndTargets[cam].position.z)),
-																 10*Time.deltaTime);
+																 25*Time.deltaTime);
 					
 					cam.transform.LookAt(camerasAndTargets[cam].position);
 				}
@@ -91,9 +91,9 @@ public class CamControl : MonoBehaviour {
 			Vector3 diceBoxPosition = Utilities().getDiceBox().transform.position;
 			transform.position = Vector3.MoveTowards(transform.position,
 													 new Vector3(diceBoxPosition.x,
-																 diceBoxPosition.y + 180,
+																 diceBoxPosition.y + 500,
 																 diceBoxPosition.z),
-													 10*Time.deltaTime);
+													 45*Time.deltaTime);
 		}
 	}
 	
@@ -141,6 +141,8 @@ public class CamControl : MonoBehaviour {
 	
 	public void ResetCamera()
 	{
+		Vector3 diceBoxPosition = Utilities().getDiceBox().transform.position;
+		
 		lookWait = 0;
 		bHasLookTarget = false;
 		
@@ -160,6 +162,9 @@ public class CamControl : MonoBehaviour {
 		
 		camera.rect = cameraRects[1][0];
 		camera.transform.name = "Main Camera";
+		camera.transform.position = new Vector3(diceBoxPosition.x,
+												 diceBoxPosition.y + 300,
+												 diceBoxPosition.z);
 		camerasAndTargets = new Dictionary<GameObject, Transform>();
 	}
 }

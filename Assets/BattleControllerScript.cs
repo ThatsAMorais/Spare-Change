@@ -321,10 +321,18 @@ public class BattleControllerScript : MonoBehaviour {
 	public GameObject d20;
 	public GameObject d100;
 	public List<Material> DiceMats;
-	
+	public Color hitTextColor;
+	public Color missTextColor;
+	public Color damageTextColor;
+	public GUIText BattleTextPrefab;
+
 	// Static
 	private static int GUI_SCREEN_BORDER = 15;
 	private static int GUI_TEXTFIELD_PAD = 25;
+	private static int GUI_BATTLESTAT_PAD = 20;
+	private static int BATTLE_QUEUE_MAX = 4;
+	private static float NEXT_TURN_DELAY_AFTER_RESULT = 10;
+	private static float THROW_DAMAGE_DELAY = 5;
 	
 	// Private
 	List<BattleActor> enemies;
@@ -344,11 +352,57 @@ public class BattleControllerScript : MonoBehaviour {
 	int dieCount = 0;
 	string battleText;
 	Vector2 scrollPosition;
+	bool bGoToNextTurn = false;
+	float nextTurnTimer = 0;
+	bool bThrowDamageRoll = false;
+	float throwDamageTimer = 0;
+	
+	// Current Battle
+	double accruedExperience = 0.0f;
+	double accruedChange = 0.0f;
+	
+	void Update()
+	{
+		if(bGoToNextTurn)
+		{
+			Debug.Log("Next-Turn-Delay Tick");
+			nextTurnTimer += Time.deltaTime;
+			
+			if(NEXT_TURN_DELAY_AFTER_RESULT < nextTurnTimer)
+			{
+				nextTurnTimer = 0;
+				bGoToNextTurn = false;
+				switchToNextTurnInQueue();
+			}
+		}
+		
+		if(bThrowDamageRoll)
+		{
+			Debug.Log("Next-Turn-Delay Tick");
+			throwDamageTimer += Time.deltaTime;
+			
+			if(THROW_DAMAGE_DELAY < throwDamageTimer)
+			{
+				throwDamageTimer = 0;
+				bThrowDamageRoll = false;
+				PlayerActed();
+			}
+		}
+	}
 	
 	void Awake ()
 	{
 		gameState = GameState.Title;
 		battleText = "";
+		
+		bGoToNextTurn = false;
+		nextTurnTimer = 0;
+		bThrowDamageRoll = false;
+		throwDamageTimer = 0;
+	
+		// Current Battle
+		accruedExperience = 0.0f;
+		accruedChange = 0.0f;
 	}
 	
 	void OnEnable ()
@@ -381,8 +435,8 @@ public class BattleControllerScript : MonoBehaviour {
 	void GUI_TitleScreen()
 	{
 		GUILayout.BeginVertical();
-		GUILayout.Box("Spare Change", "TitleBox"); 		//TODO: Need a custom style for the title
 		GUILayout.Space(100);
+		GUILayout.Box("Spare Change", "TitleBox"); 		//TODO: Need a custom style for the title
 		//GUILayout.FlexibleSpace();
 		if(GUILayout.Button("Start a New Guy")) 	// TODO: Need a custom style for the menu items
 		{
@@ -560,13 +614,68 @@ public class BattleControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 	}
 	
+	void GUI_BattleQueue()
+	{
+		GUILayout.BeginVertical();
+		
+		if(null != currentTurn)
+		{
+			GUILayout.Box(string.Format("{0}", currentTurn.actor.name[0]), "TitleBox");
+			foreach(BattleRound round in queue)
+			{
+				GUILayout.Box(string.Format("{0}", round.actor.name[0]), "TitleBox");
+			}
+		}
+		
+		GUILayout.EndVertical();
+	}
+	
+	void GUI_BattleStat(BattleActor actor)
+	{
+		// Frame
+		GUILayout.Box("", "FrameBox");
+		// Meter
+		Rect tempRect = GUILayoutUtility.GetLastRect();
+		tempRect.x += GUI_BATTLESTAT_PAD;
+		tempRect.width -= GUI_BATTLESTAT_PAD*2;
+		tempRect.y += GUI_BATTLESTAT_PAD;
+		tempRect.height -= GUI_BATTLESTAT_PAD*2;
+		GUI.Box(tempRect, "", "MeterBox");
+		// Cutout
+		GUI.Box(tempRect, "", "CutoutBox");
+		// Name
+		GUI.Box(tempRect, actor.name);
+	}
+	
+	void GUI_BattleStats()
+	{
+		GUILayout.BeginVertical();
+		
+		foreach(BattleActor enemy in enemies)
+		{
+			GUI_BattleStat(enemy);
+		}
+		
+		GUILayout.Space(10);
+		
+		GUI_BattleStat(playerCharacter);
+		
+		GUILayout.EndVertical();
+	}
+	
 	void GUI_BattleMode()
 	{
 		GUILayout.BeginVertical();
 		GUI_BattleText();
+		
+		
+		GUILayout.BeginHorizontal();
 		////
-		GUILayout.Space(Screen.height*0.5f);
+		GUI_BattleStats();
+		GUILayout.Space(Screen.width*0.5f);
+		GUI_BattleQueue();
 		////
+		GUILayout.EndHorizontal();
 		
 		if(null != currentTurn)
 		{
@@ -682,7 +791,7 @@ public class BattleControllerScript : MonoBehaviour {
 		enemies = new List<BattleActor>();
 		// BatHead //
 		enemies.Add(new BattleActor("BatHead"/*Name*/,
-									20/*Health*/,
+									1/*Health*/,
 									8/*Speed*/,
 									6/*Defense*/,
 									weapons["bat"]/*Weapon*/,
@@ -697,8 +806,6 @@ public class BattleControllerScript : MonoBehaviour {
 									4,
 									10));
 	}
-	
-	private static int BATTLE_QUEUE_MAX = 5;
 	
 	/// <summary>
 	/// Starts the battle.
@@ -736,42 +843,31 @@ public class BattleControllerScript : MonoBehaviour {
 		AppendBattleText("Beat'em and make some ~change~!");
 		
 	}
-	
-	private bool goToNextTurn = false;
-	private float nextTurnDelay = 0;
-	void Update()
-	{
-		if(goToNextTurn)
-		{
-			Debug.Log("Next-Turn-Delay Tick");
-			nextTurnDelay += Time.deltaTime;
-		}
-		
-		if((1 < nextTurnDelay) && goToNextTurn)
-		{
-			nextTurnDelay = 0;
-			goToNextTurn = false;
-			switchToNextTurnInQueue();
-		}
-	}
+
 			
 	private void NextTurn()
 	{
-		goToNextTurn = true;
-		Debug.Log("Going to next turn...");
+		bGoToNextTurn = true;
 	}
 	
 	private void switchToNextTurnInQueue()
 	{
 		BattleRound nextRound = queue.Dequeue();
+		
 		if(null != currentTurn)
-			nextRound.dice = currentTurn.dice;
+			nextRound.dice = currentTurn.dice; // ....so that they are deleted when appropriate, later
+		
 		currentTurn = nextRound;
-		CalculateTurn();
+		
+		for(int i=0; queue.Count != BATTLE_QUEUE_MAX; i++)
+		{
+			CalculateTurn();
+		}
+		
+		AppendBattleText(string.Format("--------- {0}'s turn ---------", currentTurn.actor.name));
 		
 		if(!currentTurn.bIsPlayer)
 		{
-			Debug.Log(string.Format("{0}'s turn", currentTurn.actor.name));
 			DoEnemyTurn();
 		}
 	}
@@ -809,11 +905,8 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </summary>
 	void DoEnemyTurn()
 	{
-		AppendBattleText("Enemy Turn");
 		List<string> keys = new List<string>(currentTurn.actor.actions.Keys);
-		AppendBattleText("Selecting an Action");
 		SelectedAction(keys[Random.Range(0,currentTurn.actor.actions.Count)]);
-		AppendBattleText("Directing it at the character");
 		SelectedEnemy(playerCharacter);
 		AppendBattleText("Enemy Attacking");
 		PlayerActed();
@@ -884,9 +977,9 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.ClearDice();
 		
 		// Calculate the start position from the position of the box
-		Vector3 startPosition = new Vector3(diceBox.position.x - diceBox.localScale.x/2,
-											Camera.main.transform.position.y - ((diceBox.position.y - Camera.main.transform.position.y)*0.3f),
-											diceBox.position.z + diceBox.localScale.z/2);
+		Vector3 startPosition = new Vector3(diceBox.position.x + diceBox.localScale.x*4,
+											diceBox.position.y + 50,
+											diceBox.position.z + diceBox.localScale.z*4);
 		
 		for(int d=0; d < roll.count; d++)
 		{
@@ -895,11 +988,11 @@ public class BattleControllerScript : MonoBehaviour {
 			
 			// Position
 			die.transform.position = startPosition;
-			die.rigidbody.velocity = Camera.main.transform.forward * -15 + Camera.main.transform.right * 8;
+			die.rigidbody.velocity = diceBox.right * 15 + diceBox.forward * -30;
 			
 			// Orientation
 			die.transform.rotation = Quaternion.LookRotation(Random.onUnitSphere);
-			die.rigidbody.angularVelocity = Vector3.right * 25;
+			die.rigidbody.angularVelocity = Vector3.right * -15;
 			
 			// Collect the dice into a list
 			currentTurn.dice.Add(die);
@@ -910,6 +1003,11 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 		
 		Camera.main.GetComponent<CamControl>().LookAtDice(currentTurn.dice);
+	}
+	
+	void StartTimerForThrowDamageRoll()
+	{
+		bThrowDamageRoll = true;
 	}
 	
 	/// <summary>
@@ -938,21 +1036,32 @@ public class BattleControllerScript : MonoBehaviour {
 				// Check if the rolled value was enough to hit the target
 				if(rollValue > 10)
 				{
-					AppendBattleText("Result > 10 - Hit!");
+					// TODO: Create a "HIT" text
+					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+					SpawnPts("Hit", v.x, v.y, hitTextColor); // 100 points picked
+					
+					// Describe the miss
+					AppendBattleText(string.Format("{0} > 10 - Hit!", rollValue));
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
 					currentTurn.bPlayerActed = false;
 					
-					PlayerActed();
+					StartTimerForThrowDamageRoll();
 				}
 				else
 				{
+					// TODO: Create a "Miss" text
+					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+					SpawnPts("Miss", v.x, v.y, missTextColor); // 100 points picked
+					
 					// Hit was unsuccessful, end turn
 					FinishTurn();
 				}
 			}
 			else if(true == currentTurn.bChanceToHitSuccess)
 			{
+				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+				SpawnPts(rollValue.ToString(), v.x, v.y, missTextColor); // 100 points picked
 				currentTurn.rolledDamage += rollValue;
 				
 				if(0 == currentTurn.numberOfDamageDiceStillRolling)
@@ -961,6 +1070,27 @@ public class BattleControllerScript : MonoBehaviour {
 				}
 			}
 		}
+	}
+	
+	void SpawnPts(string text, float x, float y, Color color)
+	{
+	    x = Mathf.Clamp(x, 0.05f, 0.95f); // clamp position to screen to ensure
+	    y = Mathf.Clamp(y, 0.05f, 0.9f);  // the string will be visible
+	    GUIText gui = Instantiate(BattleTextPrefab, new Vector3(x,y,0), Quaternion.identity) as GUIText;
+	    gui.guiText.text = text;
+		gui.guiText.material.color = color; // set text color
+	}
+		
+	void AccrueRewards(double change, double exp)
+	{
+		accruedChange += change;
+		accruedExperience += exp;
+	}
+	
+	void AwardRewards()
+	{
+		playerCharacter.AddExperience(accruedExperience);
+		playerCharacter.AddChange(accruedChange);
 	}
 	
 	/// <summary>
@@ -978,14 +1108,34 @@ public class BattleControllerScript : MonoBehaviour {
 				gameState = GameState.BattleOver;
 			}
 			
+			List<BattleActor> killed = new List<BattleActor>();
 			foreach(BattleActor enemy in enemies)
 			{
 				if(0 >= enemy.remainingHealth)
 				{
-					playerCharacter.AddExperience(enemy.experienceValue);
-					playerCharacter.AddChange(enemy.changeValue);
-					enemies.Remove(currentTurn.targetedActor);
+					// Add the rewards to the battle totals, to be awarded at the end
+					AccrueRewards(enemy.changeValue, enemy.experienceValue);
+					killed.Add(enemy); // Must delete after this loop or the change in the collection will cause an error
 				}
+			}
+			foreach(BattleActor killedEnemy in killed)
+			{
+				enemies.Remove(killedEnemy);
+				List<BattleRound> deletedRounds = new List<BattleRound>();
+				foreach(BattleRound round in queue)
+				{
+					if(killedEnemy == round.actor)
+					{
+						deletedRounds.Add(round);
+					}
+				}
+				List<BattleRound> currentQueue = new List<BattleRound>(queue.ToArray());
+				
+				foreach(BattleRound round in deletedRounds)
+				{
+					currentQueue.Remove(round);
+				}
+				queue = new Queue<BattleRound>(currentQueue);
 			}
 			
 			if(0 == enemies.Count)
@@ -1014,34 +1164,14 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </param>
 	GameObject CreateDie(string dieName)
 	{
-		if(dieName.Equals("d4")){
-			return InstantiateDie(d4);
-		}
-		else if(dieName.Equals("d6"))
-		{
-			//return InstantiateDie(d6_s_p);
-			return InstantiateDie(d6_s_d);
-			//return InstantiateDie(d6_r_p);
-			//return InstantiateDie(d6_r_d);
-		}
-		else if(dieName.Equals("d8")) {
-			return InstantiateDie(d8);
-		}
-		else if(dieName.Equals("d10")) {
-			return InstantiateDie(d10);
-		}
-		else if(dieName.Equals("d12")) {
-			return InstantiateDie(d12);
-		}
-		else if(dieName.Equals("d20")) {
-			return InstantiateDie(d20);
-		}
-		else if(dieName.Equals("d100")) {
-			return InstantiateDie(d100);
-		}
-		else {
-			return null;
-		}
+		if(dieName.Equals("d4")) return InstantiateDie(d4);
+		else if(dieName.Equals("d6")) return InstantiateDie(d6_s_d);
+		else if(dieName.Equals("d8")) return InstantiateDie(d8);
+		else if(dieName.Equals("d10")) return InstantiateDie(d10);
+		else if(dieName.Equals("d12")) return InstantiateDie(d12);
+		else if(dieName.Equals("d20")) return InstantiateDie(d20);
+		else if(dieName.Equals("d100")) return InstantiateDie(d100);
+		else return null;
 	}
 	
 	/// <summary>

@@ -2,7 +2,19 @@ fileFormatVersion: 2
 guid: f8955ed2c6a18054c8e5e2a96f0fa0c1
 MonoImporter:
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - guiSkin: {instanceID: 0}
+  - d4: {fileID: 100002, guid: c323d5e6020a6a84a859049d2410da67, type: 2}
+  - d6_s_p: {fileID: 100002, guid: 67bf3dd7d357cad4b90fd5ec0bb5f2e7, type: 2}
+  - d6_s_d: {fileID: 100002, guid: 565b06be582fd7a4cb8b41f9cb0eb93e, type: 2}
+  - d6_r_p: {fileID: 100002, guid: 16e4e1cfd7e5de149b497f1262e0b1c8, type: 2}
+  - d6_r_d: {fileID: 100002, guid: 487877460012e4441ad30da23b7f79a6, type: 2}
+  - d8: {fileID: 100002, guid: f08adb13c7068d34bb1773681add8eb7, type: 2}
+  - d10: {fileID: 100002, guid: 316af144ca06b7448bb302a59beea0b1, type: 2}
+  - d12: {fileID: 100002, guid: a2a1e1149781e3249b6fb717ebad9ed6, type: 2}
+  - d20: {fileID: 100002, guid: f368b1331f72a7e4096b41a551e1fa88, type: 2}
+  - d100: {fileID: 100002, guid: 41253a520104ea94ab48871a86f9abea, type: 2}
+  - BattleTextPrefab: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
