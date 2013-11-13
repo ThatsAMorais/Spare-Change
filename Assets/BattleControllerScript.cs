@@ -620,10 +620,10 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		if(null != currentTurn)
 		{
-			GUILayout.Box(string.Format("{0}", currentTurn.actor.name[0]), "TitleBox");
+			GUILayout.Box(string.Format("{0}{1}", currentTurn.actor.name[0], currentTurn.actor.name[1]), "BattleQueue");
 			foreach(BattleRound round in queue)
 			{
-				GUILayout.Box(string.Format("{0}", round.actor.name[0]), "TitleBox");
+				GUILayout.Box(string.Format("{0}{1}", round.actor.name[0], round.actor.name[1]), "BattleQueue");
 			}
 		}
 		
@@ -653,12 +653,15 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		foreach(BattleActor enemy in enemies)
 		{
+			GUILayout.Space(10);
 			GUI_BattleStat(enemy);
 		}
 		
-		GUILayout.Space(10);
+		GUILayout.Space(20);
 		
 		GUI_BattleStat(playerCharacter);
+		
+		GUILayout.FlexibleSpace();
 		
 		GUILayout.EndVertical();
 	}
@@ -671,9 +674,12 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		GUILayout.BeginHorizontal();
 		////
-		GUI_BattleStats();
+		
 		GUILayout.Space(Screen.width*0.5f);
 		GUI_BattleQueue();
+		GUILayout.Space(5);
+		//GUI_BattleStats();
+		
 		////
 		GUILayout.EndHorizontal();
 		
