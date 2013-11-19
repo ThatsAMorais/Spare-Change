@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 
 using GameState = GameControllerScript.GameState;
-using BattleActorDefinition = GameControllerScript.BattleActorDefinition;
 using EnemyDefinition = GameControllerScript.EnemyDefinition;
 using BattleAction = GameControllerScript.BattleAction;
 using Attack = GameControllerScript.Attack;
@@ -16,37 +15,38 @@ public class BattleControllerScript : MonoBehaviour {
 	public class BattleActor
 	{
 		public string name {get;set;}
-		public int remainingHealth {get;set;}
 		public Weapon weapon {get;set;}
-		BattleActorDefinition definition {get;set;}
+		public int remainingHealth {get;set;}
+		public int speed {get;set;}
+		public int defense {get;set;}
 
 		public void addDamage(int dmg)
 		{
-			remainingHealth -= dmg;
+			remainingHealth = dmg;
 		}
 
-		public BattleActor(BattleActorDefinition actorDefinition)
+		public BattleActor(string actorName, Weapon actorWeapon)
 		{
-			name = actorDefinition.name;
-			remainingHealth = actorDefinition.health;
-			weapon = actorDefinition.weapon;
-			definition = actorDefinition;
+			name = actorName;
+			weapon = actorWeapon;
+			remainingHealth = 1;			// Default
+			speed = 5;						// Default
+			defense = 5;					// Default
 		}
 
-		public void AddWeapon(Weapon theWeapon)
+		public BattleActor(string actorName, Weapon actorWeapon, int actorHealth, int actorSpeed, int actorDefense)
+		{
+			name = actorName;
+			weapon = actorWeapon;
+			remainingHealth = actorHealth;	// Default
+			speed = actorSpeed;				// Default
+			defense = actorDefense;			// Default
+		}
+
+		public void ChangeWeapon(Weapon theWeapon)
 		{
 			// Set this as the current weapon
 			weapon = theWeapon; // Accept the change
-		}
-
-		public int getSpeed()
-		{
-			return definition.speed;
-		}
-
-		public int getDefense()
-		{
-			return definition.defense;
 		}
 
 		public List<Attack> getActions()
@@ -57,29 +57,82 @@ public class BattleControllerScript : MonoBehaviour {
 
 	public class Player : BattleActor
 	{
-		public string type {get;set;}
-		public double change {get;set;}
-		public double xp {get;set;}
+		private static int PLAYER_LEVEL_MAX = 200;
+		private static Dictionary<int, float> levelTable = new Dictionary<int, float>()
+		{
+			{1, 0},{2, 83},{3, 174},{4, 276},{5, 388},{6, 512},{7, 650},{8, 801},{9, 969},
+			{10, 1154},{11, 1358},{12, 1584},{13, 1833},{14, 2107},
+			{15, 2411},{16, 2746},{17, 3115},{18, 3523},{19, 3973},
+			{20, 4470},{21, 5018},{22, 5624},{23, 6291},{24, 7028},
+			{25, 7842},{26, 8740},{27, 9730},{28, 10824},{29, 12031},
+			{30, 13363},{31, 14833},{32, 16456},{33, 18247},{34, 20224},
+			{35, 22406},{36, 24815},{37, 27473},{38, 30408},{39, 33648},
+			{40, 37224},{41, 41171},{42, 45529},{43, 50339},{44, 55649},
+			{45, 61512},{46, 67983},{47, 75127},{48, 83014},{49, 91721},
+			{50, 101333},{51, 111945},{52, 123660},{53, 136594},{54, 150872},
+			{55, 166636},{56, 184040},{57, 203254},{58, 224466},{59, 247886},
+			{60, 273742},{61, 302288},{62, 333804},{63, 368599},{64, 407015},
+			{65, 449428},{66, 496254},{67, 547953},{68, 605032},{69, 668051},
+			{70, 737627},{71, 814445},{72, 899257},{73, 992895},{74, 1096278},
+			{75, 1210421},{76, 1336443},{77, 1475581},{78, 1629200},{79, 1798808},
+			{80, 1986068},{81, 2192818},{82, 2421087},{83, 2673114},{84, 2951373},
+			{85, 3258594},{86, 3597792},{87, 3972294},{88, 4385776},{89, 4842295},
+			{90, 5346332},{91, 5902831},{92, 6517253},{93, 7195629},{94, 7944614},
+			{95, 8771558},{96, 9684577},{97, 10692629},{98, 11805606},{99, 13034431},
+			{100, 14391160},{101, 15889109},{102, 17542976},{103, 19368992},{104, 21385073},
+			{105, 23611006},{106, 26068632},{107, 28782069},{108, 31777943},{109, 35085654},
+			{110, 38737661},{111, 42769801},{112, 47221641},{113, 52136869},{114, 57563718},
+			{115, 63555443},{116, 70170840},{117, 77474828},{118, 85539082},{119, 94442737},
+			{120, 104273167},{121, 115126838},{122, 127110260},{123, 140341028},{124, 154948977},
+			{125, 171077457},{126, 188884740},{127, 208545572},{128, 230252886},{129, 254219702},
+			{130, 280681209},{131, 309897078},{132, 342154009},{133, 377768545},{134, 417090179},
+			{135, 460504778},{136, 508438379},{137, 561361362},{138, 619793069},{139, 684306901},
+			{140, 755535943},{141, 834179178},{142, 921008346},{143, 1016875516},{144, 1122721449},
+			{145, 1239584831},{146, 1368612462},{147, 1511070513},{148, 1668356950},{149, 1842015252},
+			{150, 2033749558},{151, 2245441392},{152, 2479168121},{153, 2737223349},{154, 3022139416},
+			{155, 3336712255},{156, 3684028823},{157, 4067497401},{158, 4490881032},{159, 4958334456},
+			{160, 5474444875},{161, 6044276973},{162, 6673422613},{163, 7368055713},{164, 8134992831},
+			{165, 8981760056},{166, 9916666866},{167, 10948887667},{168, 12088551825},{169, 13346843067},
+			{170, 14736109228},{171, 16269983424},{172, 17963517835},{173, 19833331415},{174, 21897772978},
+			{175, 24177101254},{176, 26693683698},{177, 29472215980},{178, 32539964331},{179, 35927033113},
+			{180, 39666660232},{181, 43795543315},{182, 48354199826},{183, 53387364671},{184, 58944429193},
+			{185, 65079925854},{186, 71854063374},{187, 79333317570},{188, 87591083692},{189, 96708396670},
+			{190, 106774726318},{191, 117888855318},{192, 130159848595},{193, 143708123591},{194, 158666631937},
+			{195, 175182164138},{196, 193416790048},{197, 213549449297},{198, 235777707252},{199, 260319693761},
+			{200, 287416243706}  // That'll keep'em busy...
+		};
+
+		public float change {get;set;}
+		public float xp {get;set;}
 		public int level {get;set;}
 		public int kills {get;set;}
+		public bool bLeveledUp {get;set;}
 
-		public Player(BattleActorDefinition actorDefinition, string theName) : base(actorDefinition)
+		public Player(string playerName, Weapon playerWeapon, float playerXp, int playerLevel, float playerChange, int playerKills) : base(playerName, playerWeapon)
 		{
-			name = theName;
-			type = actorDefinition.name;
-			change = 0;
-			xp = 0;
-			kills = 0;
+			name = playerName;
+			xp = playerXp;
+			level = playerLevel;
+			change = playerChange;
+			kills = playerKills;
+			remainingHealth = 30 * (int)(1 + level*0.1f);
 		}
 
-		public void AddChange(double amountOfChange)
+		public void AddChange(float amountOfChange)
 		{
 			change += amountOfChange;
 		}
 
-		public void AddExperience(double amountOfExp)
+		public void AddExperience(float amountOfExp)
 		{
-			xp += amountOfExp;
+			if(xp < levelTable[PLAYER_LEVEL_MAX])
+			{
+				xp = Mathf.Min(xp + amountOfExp, levelTable[PLAYER_LEVEL_MAX]);
+
+				// Calculate current level
+				if((PLAYER_LEVEL_MAX > level) && (xp >= levelTable[level+1]))
+					level++;
+			}
 		}
 
 		public void AddKills(int killCount)
@@ -90,9 +143,9 @@ public class BattleControllerScript : MonoBehaviour {
 
 	public class Enemy : BattleActor
 	{
-		public EnemyDefinition enemyDefinition {get;set;}
+		private EnemyDefinition enemyDefinition;
 
-		public Enemy(EnemyDefinition enemyDef) : base(enemyDef.definition)
+		public Enemy(EnemyDefinition enemyDef) : base(enemyDef.name, enemyDef.weapon, enemyDef.health, enemyDef.speed, enemyDef.defense)
 		{
 			enemyDefinition = enemyDef;
 		}
@@ -102,12 +155,12 @@ public class BattleControllerScript : MonoBehaviour {
 			return enemyDefinition.name;
 		}
 
-		public double getChangeValue()
+		public float getChangeValue()
 		{
 			return enemyDefinition.changeValue;
 		}
 
-		public double getExperienceValue()
+		public float getExperienceValue()
 		{
 			return enemyDefinition.experienceValue;
 		}
@@ -186,12 +239,12 @@ public class BattleControllerScript : MonoBehaviour {
 	float throwDamageTimer;
 	
 	// Current Battle
-	double accruedExperience;
-	double accruedChange;
+	float accruedExperience;
+	float accruedChange;
 	int killsThisBattle;
 
 
-	// -- Unity
+	//,- Unity
 
 	void Awake ()
 	{
@@ -239,7 +292,7 @@ public class BattleControllerScript : MonoBehaviour {
 	}
 
 
-	// -- Public APIs
+	//,- Public APIs
 
 	public List<BattleActor> getBattleEnemies()
 	{
@@ -310,7 +363,7 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 	}
 
-	// -- Battle Queue
+	//,- Battle Queue
 
 	void InitializeQueue()
 	{
@@ -354,7 +407,7 @@ public class BattleControllerScript : MonoBehaviour {
 			CalculateTurn();
 		}
 		
-		Utilities().AppendBattleText(string.Format("--------- {0}'s turn ---------", currentTurn.actor.name));
+		Utilities().AppendBattleText(string.Format("--------- {0}'s turn,--------", currentTurn.actor.name));
 		
 		if(!currentTurn.bIsPlayer)
 		{
@@ -375,8 +428,8 @@ public class BattleControllerScript : MonoBehaviour {
 		foreach(BattleActor enemy in enemies)
 		{
 			// Compare the current actor with initiative to the enemy, select the min of the two
-			if(battleActorTurnCounts[actorWithInitiative.name] * actorWithInitiative.getSpeed() >
-				battleActorTurnCounts[enemy.name] * enemy.getSpeed())
+			if(battleActorTurnCounts[actorWithInitiative.name] * actorWithInitiative.speed
+				> battleActorTurnCounts[enemy.name] * enemy.speed)
 			{
 				actorWithInitiative = enemy;
 			}
@@ -384,13 +437,13 @@ public class BattleControllerScript : MonoBehaviour {
 		
 		battleActorTurnCounts[actorWithInitiative.name]++;
 		
-		roundCount += actorWithInitiative.getSpeed();
+		roundCount += actorWithInitiative.speed;
 		
 		// Enqueue this turn
 		queue.Enqueue(new BattleRound(actorWithInitiative));
 	}
 
-	// -- Actions
+	//,- Actions
 
 	/// <summary>
 	/// Dos the enemy turn.
@@ -494,7 +547,7 @@ public class BattleControllerScript : MonoBehaviour {
 					Utilities().SpawnPts("Hit", v.x - 0.25f, v.y, hitTextColor); // 100 points picked
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("{0} > 10 - Hit!", rollValue));
+					Utilities().AppendBattleText(string.Format("{0} > 10, Hit!", rollValue));
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
 					currentTurn.bPlayerActed = false;
@@ -525,7 +578,7 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 	}
 		
-	void AccrueRewards(double change, double exp, int kills)
+	void AccrueRewards(float change, float exp, int kills)
 	{
 		accruedChange += change;
 		accruedExperience += exp;
@@ -542,8 +595,7 @@ public class BattleControllerScript : MonoBehaviour {
 								playerCharacter.xp,
 								playerCharacter.kills,
 								playerCharacter.level,
-								playerCharacter.weapon.name,
-								playerCharacter.type);
+								playerCharacter.weapon.name);
 	}
 	
 	/// <summary>

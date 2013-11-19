@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 // Type imports
 using GameState = GameControllerScript.GameState;
-using BattleActorDefinition = GameControllerScript.BattleActorDefinition;
 using BattleAction = GameControllerScript.BattleAction;
+using Weapon = GameControllerScript.Weapon;
 using BattleActor = BattleControllerScript.BattleActor;
 using Character = BattleControllerScript.Player;
 using BattleRound = BattleControllerScript.BattleRound;
@@ -18,6 +18,34 @@ public class GUIControllerScript : MonoBehaviour {
 	private static int GUI_SCREEN_BORDER = 15;
 	private static int GUI_TEXTFIELD_PAD = 25;
 	//private static int GUI_BATTLESTAT_PAD = 20;
+
+	float leafOffset;
+	float frameOffset;
+	float skullOffset;
+
+	float RibbonOffsetX;
+	float FrameOffsetX;
+	float SkullOffsetX;
+	float RibbonOffsetY;
+	float FrameOffsetY;
+	float SkullOffsetY;
+
+	float WSwaxOffsetX;
+	float WSwaxOffsetY;
+	float WSribbonOffsetX;
+	float WSribbonOffsetY;
+
+	float spikeCount;
+
+	//if you're using the spikes you'll need to find sizes that work well with them these are a few...
+	Rect actionSelectionRect = new Rect (600, 420, 500, 300);
+	Rect battleTextRect = new Rect (10, 420, 500, 300);
+	Rect battleQueueRect = new Rect (850, 0, 250, 300);
+	Rect battleStatsRect = new Rect (0, 40, 350, 500);
+
+	float HroizSliderValue = 0.5f;
+	float VertSliderValue = 0.5f;
+	bool ToggleBTN = false;
 
 	public GUISkin guiSkin;
 	public GUIText BattleTextPrefab;
@@ -42,6 +70,53 @@ public class GUIControllerScript : MonoBehaviour {
 		public string actorClass;
 	}
 
+
+	/// <summary>
+	/// Raises the GU event.
+	/// </summary>
+	void OnGUI()
+	{
+		GameState gameState = Utilities().getGameState();
+		GUI.skin = guiSkin;
+
+		if(previousGameState != gameState)
+		{
+			// Reset the inputs between states
+			characterNameInput = "";
+			passwordInput = "";
+			loginMessage = "";
+		}
+
+		switch(gameState)
+		{
+		case GameState.Title:
+			GUI_TitleScreen();
+			break;
+
+		case GameState.Register:
+		case GameState.Login:
+			GUI_Register_Login();
+			break;
+
+		case GameState.CharacterSelection:
+			GUI_CharacterSelection();
+			break;
+
+		case GameState.PlayerProfile:
+			GUI_PlayerProfile();
+			break;
+
+		case GameState.BattleMode:
+			GUI_BattleMode();
+			break;
+
+		case GameState.BattleOver:
+			GUI_BattleOver();
+			break;
+		}
+
+		previousGameState = gameState;
+	}
 
 	public void PlayerLoggedIn(ScoreoidPlayer player)
 	{
@@ -109,6 +184,11 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void GUI_TitleScreen()
 	{
+
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+									 0 + GUI_SCREEN_BORDER,
+									 Screen.width - GUI_SCREEN_BORDER,
+									 Screen.height - GUI_SCREEN_BORDER));
 		bSubmitted = false;
 
 		GUILayout.BeginVertical();
@@ -117,15 +197,15 @@ public class GUIControllerScript : MonoBehaviour {
 		//GUILayout.FlexibleSpace();
 		if(GUILayout.Button("Start a New Guy")) 	// TODO: Need a custom style for the menu items
 		{
-			//TODO: Do some kind of transition to the next UI state
 			Utilities().setGameState(GameState.Register);
 		}
 		if(GUILayout.Button("Load Existing")) 		// TODO: Need a custom style for the menu items
 		{
-			//TODO: Do some kind of transition to the next UI state
 			Utilities().setGameState(GameState.Login);
 		}
 		GUILayout.EndVertical();
+
+		GUILayout.EndArea();
 	}
 
 	void SubmitInput()
@@ -150,6 +230,10 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void GUI_Register_Login()
 	{
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+							 0 + GUI_SCREEN_BORDER,
+							 Screen.width - GUI_SCREEN_BORDER,
+							 Screen.height - GUI_SCREEN_BORDER));
 		GUILayout.BeginVertical();
 
 		GUILayout.Space(100);
@@ -159,14 +243,14 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.Space(10);
 		GUILayout.EndHorizontal();
 
-		GUILayout.Label("Character Name", "BattleQueue");
+		GUILayout.Label("Character Name");
 		characterNameInput = GUILayout.TextField(characterNameInput);
 		if (Event.current.Equals(Event.KeyboardEvent("return")))
 		{
 			SubmitInput();
 		}
 
-		GUILayout.Label("Password", "BattleQueue");
+		GUILayout.Label("Password");
 		passwordInput = GUILayout.PasswordField(passwordInput, "*"[0]);
 		if (Event.current.Equals(Event.KeyboardEvent("return")))
 		{
@@ -192,10 +276,17 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		GUILayout.EndHorizontal();
 		GUILayout.EndVertical();
+
+		GUILayout.EndArea();
 	}
 
 	void GUI_CharacterSelection()
 	{
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+							 0 + GUI_SCREEN_BORDER,
+							 Screen.width - GUI_SCREEN_BORDER,
+							 Screen.height - GUI_SCREEN_BORDER));
+
 		// TODO: Wire the SelectCharacter function to this script
 		GUILayout.FlexibleSpace();
 
@@ -205,11 +296,11 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.BeginVertical();
 
-		foreach(BattleActorDefinition actorType in Utilities().getActorTypes())
+		foreach(Weapon weaponType in Utilities().getWeaponTypes(1))
 		{
-			if(GUILayout.Button(string.Format("{0}", actorType.name)))
+			if(GUILayout.Button(string.Format("{0}", weaponType.name)))
 			{
-				Utilities().UpdatePlayer(newCharacter.name, 0, 0, 0, 1, actorType.weapon.name, actorType.name);
+				Utilities().UpdatePlayer(newCharacter.name, 0, 0, 0, 1, weaponType.name);
 			}
 			GUILayout.Space(20);
 		}
@@ -220,15 +311,18 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 
 		GUILayout.FlexibleSpace();
+
+		GUILayout.EndArea();
 	}
 
-	void Login(string username, string password)
-	{
-		// TODO: Request player from Score Keeper
-	}
 
 	void GUI_PlayerProfile()
 	{
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+							 0 + GUI_SCREEN_BORDER,
+							 Screen.width - GUI_SCREEN_BORDER,
+							 Screen.height - GUI_SCREEN_BORDER));
+
 		Player player = Utilities().getCurrentCharacter();
 
 		GUILayout.BeginVertical();
@@ -243,7 +337,6 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 
 		GUILayout.BeginHorizontal();
-		GUILayout.FlexibleSpace();
 		if(GUILayout.Button("Start Battle"))
 		{
 			// Now that the battle is initialized, switch the gamestate to battle-mode
@@ -258,15 +351,16 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 		GUILayout.EndHorizontal();
 
-
 		GUILayout.FlexibleSpace();
 
 		GUILayout.EndVertical();
+
+		GUILayout.EndArea();
 	}
 	
 	void GUI_BattleMode_enemyTurn()
 	{
-		GUILayout.Box(string.Format("{0}'s turn", Utilities().getCurrentTurnActor().name));
+		GUILayout.Box(string.Format("{0}'s turn", Utilities().getCurrentTurnActor().name), "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
 		////
@@ -275,7 +369,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void GUI_BattleMode_playerSelectAction()
 	{
-		GUILayout.Box("Select an Action");
+		GUILayout.Box("Select an Action", "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
 		////
@@ -295,7 +389,7 @@ public class GUIControllerScript : MonoBehaviour {
 	
 	void GUI_BattleMode_playerSelectTarget()
 	{
-		GUILayout.Box("Select a Target");
+		GUILayout.Box("Select a Target", "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
 		////
@@ -327,30 +421,30 @@ public class GUIControllerScript : MonoBehaviour {
 		////
 		GUILayout.FlexibleSpace();
 		////
-		GUILayout.Box(string.Format("Rolling {0}", (true == bRollingDamage ? "-Damage-" : "-Chance to Hit-") ));
+		GUILayout.Box(string.Format("Rolling {0}", (true == bRollingDamage ? "-Damage-" : "-Chance to Hit-") ), "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
 		////
 		GUILayout.EndHorizontal();
 	}
 	
-	void GUI_BattleText()
+	void GUI_BattleMode_BattleText(int windowID)
 	{
+		GUILayout.Space(8);
+
 		GUILayout.BeginHorizontal();
 		
-		GUILayout.Space(GUI_TEXTFIELD_PAD);
-		
 		scrollPosition = GUILayout.BeginScrollView(scrollPosition);
-		GUILayout.Label(string.Format("{0}", battleText));
+		GUILayout.Label(string.Format("{0}", battleText), "PlainText");
 		GUILayout.EndScrollView();
-		
-		GUILayout.Space(GUI_TEXTFIELD_PAD);
 		
 		GUILayout.EndHorizontal();
 	}
 	
-	void GUI_BattleQueue()
+	void GUI_BattleMode_BattleQueue(int windowID)
 	{
+		GUILayout.Space(32);
+
 		GUILayout.BeginVertical();
 
 		BattleRound currentTurn = Utilities().getCurrentTurn();
@@ -373,7 +467,7 @@ public class GUIControllerScript : MonoBehaviour {
 	}
 
 	/*
-	void GUI_BattleStat(BattleActor actor)
+	void GUI_BattleMode_BattleStat(BattleActor actor)
 	{
 		// Frame
 		GUILayout.Box("", "FrameBox");
@@ -390,14 +484,16 @@ public class GUIControllerScript : MonoBehaviour {
 		GUI.Box(tempRect, actor.name);
 	}
 
-	void GUI_BattleStats()
+	void GUI_BattleMode_BattleStats(int windowID)
 	{
+		GUILayout.Space(8);
+
 		GUILayout.BeginVertical();
 
 		foreach(BattleActor enemy in Utilities().getBattleEnemies())
 		{
 			GUILayout.Space(10);
-			GUI_BattleStat(enemy);
+			GUI_BattleMode_BattleStat(enemy);
 		}
 
 		GUILayout.Space(20);
@@ -411,25 +507,14 @@ public class GUIControllerScript : MonoBehaviour {
 	*/
 
 	bool bBattleStarted = false;
-	void GUI_BattleMode()
+	void GUI_BattleMode_actionSelection(int windowID)
 	{
+		AddSpikes(actionSelectionRect.width);
+
 		BattleRound currentTurn = Utilities().getCurrentTurn();
 
-		GUILayout.BeginVertical();
-		GUI_BattleText();
-		
-		
-		GUILayout.BeginHorizontal();
-		////
-		
-		GUILayout.FlexibleSpace();
-		GUI_BattleQueue();
-		GUILayout.Space(5);
-		//GUI_BattleStats();
-		
-		////
-		GUILayout.EndHorizontal();
-		
+		GUILayout.Space(8);
+
 		if(null != currentTurn)
 		{
 			bBattleStarted = true;
@@ -441,11 +526,11 @@ public class GUIControllerScript : MonoBehaviour {
 				case BattleRound.State.SelectAction:
 					GUI_BattleMode_playerSelectAction();
 					break;
-				
+
 				case BattleRound.State.SelectTarget:
 					GUI_BattleMode_playerSelectTarget();
 					break;
-					
+
 				case BattleRound.State.Act:
 					GUI_BattleMode_playerAct();
 					break;
@@ -459,16 +544,61 @@ public class GUIControllerScript : MonoBehaviour {
 		else
 		{
 			if(true == bBattleStarted)
-				GUILayout.Label("Queueing Next Turn");
+			{
+			}
 			else
-				GUILayout.Label("Starting Battle");
+			{
+
+			}
 		}
+	}
+
+	void GUI_BattleMode()
+	{
+
+		actionSelectionRect = GUI.Window(0, actionSelectionRect, GUI_BattleMode_actionSelection, "Actions");
+	 	//now adjust to the group. (0,0) is the topleft corner of the group.
+		GUI.BeginGroup(new Rect (0,0,100,100));
+		// End the group we started above. This is very important to remember!
+		GUI.EndGroup();
+		battleTextRect = GUI.Window(1, battleTextRect, GUI_BattleMode_BattleText, "");
+
+		battleQueueRect = GUI.Window(2, battleQueueRect, GUI_BattleMode_BattleQueue, "Battle Queue");
+
+		//battleStatsRect = GUI.Window(3, battleStatsRect, GUI_BattleMode_BattleStats, "");
+
+		/*
+		GUILayout.BeginVertical();
+		GUI_BattleMode_BattleText();
 		
+		
+		GUILayout.BeginHorizontal();
+		////
+		
+		GUILayout.FlexibleSpace();
+		GUI_BattleMode_BattleQueue();
+		GUILayout.Space(5);
+		//GUI_BattleStats();
+
+		////
+		GUILayout.EndHorizontal();
+		*/
+
+
+
+
+		/*
 		GUILayout.EndVertical();
+		*/
 	}
 	
 	void GUI_BattleOver()
 	{
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+							 0 + GUI_SCREEN_BORDER,
+							 Screen.width - GUI_SCREEN_BORDER,
+							 Screen.height - GUI_SCREEN_BORDER));
+
 		Character playerCharacter = Utilities().getCurrentCharacter();
 
 		GUILayout.BeginVertical();
@@ -476,58 +606,7 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.Box(string.Format("{0} is the victor",
 									(playerCharacter.remainingHealth > 0 ? playerCharacter.name : "The Enemy")));
 		GUILayout.EndVertical();
-	}
-
-	/// <summary>
-	/// Raises the GU event.
-	/// </summary>
-	void OnGUI()
-	{
-		GameState gameState = Utilities().getGameState();
-		GUI.skin = guiSkin;
-
-		if(previousGameState != gameState)
-		{
-			// Reset the inputs between states
-			characterNameInput = "";
-			passwordInput = "";
-			loginMessage = "";
-		}
-
-		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-									 0 + GUI_SCREEN_BORDER,
-									 Screen.width - GUI_SCREEN_BORDER,
-									 Screen.height - GUI_SCREEN_BORDER));
-		switch(gameState)
-		{
-		case GameState.Title:
-			GUI_TitleScreen();
-			break;
-
-		case GameState.Register:
-		case GameState.Login:
-			GUI_Register_Login();
-			break;
-
-		case GameState.CharacterSelection:
-			GUI_CharacterSelection();
-			break;
-
-		case GameState.PlayerProfile:
-			GUI_PlayerProfile();
-			break;
-
-		case GameState.BattleMode:
-			GUI_BattleMode();
-			break;
-
-		case GameState.BattleOver:
-			GUI_BattleOver();
-			break;
-		}
 		GUILayout.EndArea();
-
-		previousGameState = gameState;
 	}
 
 
@@ -553,16 +632,18 @@ public class GUIControllerScript : MonoBehaviour {
 
 
 	// -- Necromancer Style
-	/*
+
 	void AddSpikes(float winX)
 	{
 		spikeCount = Mathf.Floor(winX - 152)/22;
 		GUILayout.BeginHorizontal();
 		GUILayout.Label ("", "SpikeLeft");//-------------------------------- custom
-		for (i = 0; i < spikeCount; i++)
+		/*
+		for (int i = 0; i < spikeCount; i++)
         {
 			GUILayout.Label ("", "SpikeMid");//-------------------------------- custom
         }
+        */
 		GUILayout.Label ("", "SpikeRight");//-------------------------------- custom
 		GUILayout.EndHorizontal();
 	}
@@ -601,7 +682,6 @@ public class GUIControllerScript : MonoBehaviour {
 		GUI.Label(new Rect(FrameOffsetX, FrameOffsetY, 0, 0), "", "IconFrame");//-------------------------------- custom
 		GUI.Label(new Rect(SkullOffsetX, SkullOffsetY, 0, 0), "", "Skull");//-------------------------------- custom
 	}
-*/
 
 
 	UtilitiesScript utilitiesScript;

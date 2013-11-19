@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 // -- GameController
 using GameState = GameControllerScript.GameState;
-using BattleActorDefinition = GameControllerScript.BattleActorDefinition;
 using EnemyDefinition = GameControllerScript.EnemyDefinition;
 using BattleAction = GameControllerScript.BattleAction;
 using Weapon = GameControllerScript.Weapon;
@@ -208,13 +207,13 @@ public class UtilitiesScript : MonoBehaviour {
 	{
 		ScoreKeeper().GetPlayer(playerName, password);
 	}
-	public void UpdatePlayer(string playerName, double money, double xp, int kills, int current_level, string weapon, string actorTypeName)
+	public void UpdatePlayer(string playerName, float money, float xp, int kills, int current_level, string weapon)
 	{
-		ScoreKeeper().UpdatePlayer(playerName, money, xp, kills, current_level, weapon, actorTypeName);
+		ScoreKeeper().UpdatePlayer(playerName, money, xp, kills, current_level, weapon);
 	}
 
 	/*
-	public void UpdateChange(string playerName, double money)
+	public void UpdateChange(string playerName, float money)
 	{
 		ScoreKeeper().UpdateChange(playerName, money);
 	}
@@ -294,14 +293,14 @@ public class UtilitiesScript : MonoBehaviour {
 
 	// -- Object Definitions
 
-	public List<BattleActorDefinition> getActorTypes()
-	{
-		return GameController().getActorTypes();
-	}
-
 	public Weapon getWeapon(string weaponName)
 	{
 		return GameController().getWeapon(weaponName);
+	}
+
+	public List<Weapon> getWeaponTypes(int level)
+	{
+		return GameController().getWeaponTypes(level);
 	}
 
 	public EnemyDefinition getEnemy(string enemyName)

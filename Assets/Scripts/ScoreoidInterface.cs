@@ -17,14 +17,13 @@ public class ScoreoidInterface : MonoBehaviour {
 	public class ScoreoidPlayer
 	{
 		public string playerName;
-		public double change;
+		public float change;
 		public int numberOfKills;
 		public string weapon;
 		public int level;
-		public double xp;
-		public string actorClassName;
+		public float xp;
 
-		public ScoreoidPlayer(string name, double money, int kills, string inventory, int lvl, double exp, string className)
+		public ScoreoidPlayer(string name, float money, int kills, string inventory, int lvl, float exp/*, string className*/)
 		{
 			playerName = name;
 			change = money;
@@ -32,7 +31,6 @@ public class ScoreoidInterface : MonoBehaviour {
 			weapon = inventory;
 			level = lvl;
 			xp = exp;
-			actorClassName = className;
 		}
 	}
 
@@ -52,7 +50,7 @@ public class ScoreoidInterface : MonoBehaviour {
 		form.AddField( "inventory", "" );
 		form.AddField( "current_level", 1 );
 		form.AddField( "xp", 1 );
-		form.AddField( "unique_id", "");		// NOTE: Using "unique_id" because there is no "class" field
+		//form.AddField( "unique_id", "");		// NOTE: Using "unique_id" because there is no "class" field
 
 		SendScoreoidForm("createPlayer", form);
 	}
@@ -69,7 +67,7 @@ public class ScoreoidInterface : MonoBehaviour {
 		SendScoreoidForm("getPlayer", form);
 	}
 
-	public void UpdatePlayer(string playerName, double money, double xp, int kills, int current_level, string weapon, string actorClassName)
+	public void UpdatePlayer(string playerName, float money, float xp, int kills, int current_level, string weapon)
 	{
 		WWWForm form = StartScoreoidForm();
 
@@ -80,79 +78,10 @@ public class ScoreoidInterface : MonoBehaviour {
 		form.AddField( "kills", kills.ToString());
 		form.AddField( "current_level", current_level.ToString());
 		form.AddField( "inventory", weapon);
-		form.AddField( "unique_id", actorClassName);
 
 		// Send the form
 		SendScoreoidForm("editPlayer", form);
 	}
-
-	/*
-	public void UpdateChange(string playerName, double money)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "money");
-		form.AddField( "value", money.ToString());
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-
-	public void UpdateKills(string playerName, int kills)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "kills");
-		form.AddField( "value", kills.ToString());
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-
-	public void UpdateWeapon(string playerName, string weapon)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "inventory");
-		form.AddField( "value", weapon);
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-
-	public void UpdateLevel(string playerName, int level)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "current_level");
-		form.AddField( "value", level.ToString());
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-
-	public void UpdateXP(string playerName, int xp)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "xp");
-		form.AddField( "value", xp.ToString());
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-
-	public void UpdateClass(string playerName, string actorClassName)
-	{
-		WWWForm form = StartScoreoidForm();
-
-		form.AddField( "username", playerName );
-		form.AddField( "field", "unique_id");		// NOTE: Using "unique_id" because there is no "class" field
-		form.AddField( "value", actorClassName);
-
-		SendScoreoidForm("updatePlayerField", form);
-	}
-	*/
 
 
 	// -- Utils
@@ -228,12 +157,12 @@ public class ScoreoidInterface : MonoBehaviour {
 				// Parse the player into the ScoreoidPlayer.
 				ScoreoidPlayer player =
 					new ScoreoidPlayer( N[0]["Player"]["username"],
-									 	N[0]["Player"]["money"].AsDouble,
+									 	N[0]["Player"]["money"].AsFloat,
 										N[0]["Player"]["kills"].AsInt,
 										N[0]["Player"]["inventory"],
 										N[0]["Player"]["current_level"].AsInt,
-										N[0]["Player"]["xp"].AsDouble,
-										N[0]["Player"]["unique_id"]);
+										N[0]["Player"]["xp"].AsFloat/*,
+										N[0]["Player"]["unique_id"]*/);
 
 				// Set the player
 				Utilities().PlayerLoggedIn(player);
