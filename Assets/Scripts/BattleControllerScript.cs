@@ -619,7 +619,7 @@ public class BattleControllerScript : MonoBehaviour {
 				int actorHitModifier = currentTurn.selectedAction.hitModifier;
 				int targetDefenseModifier = currentTurn.targetedActor.getDefense();
 				// Check if the rolled value was enough to hit the target (factoring in the action's hit modifier)
-				if(rollValue  + actorHitModifier - targetDefenseModifier > 15)
+				if(rollValue  + actorHitModifier - targetDefenseModifier > 10)
 				{
 					// TODO: Create a "HIT" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
@@ -631,7 +631,7 @@ public class BattleControllerScript : MonoBehaviour {
 					}
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) >= 15, Hit!",
+					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) >= 10, Hit!",
 					                             rollValue, actorHitModifier, targetDefenseModifier));
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
@@ -641,7 +641,7 @@ public class BattleControllerScript : MonoBehaviour {
 				}
 				else
 				{
-					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) < 15, Missed!",
+					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) < 10, Missed!",
 					                             rollValue, actorHitModifier, targetDefenseModifier));
 
 					// TODO: Create a "Miss" text
