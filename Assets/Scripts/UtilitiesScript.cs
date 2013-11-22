@@ -33,6 +33,20 @@ public class UtilitiesScript : MonoBehaviour {
 		return diceBox.transform;
 	}
 
+	List<Transform> boxSides;
+	public List<Transform> getDiceBoxSides()
+	{
+		if(null == boxSides)
+		{
+			boxSides = new List<Transform>();
+			boxSides.Add(diceBox.transform.FindChild("brim_x_a"));
+			boxSides.Add(diceBox.transform.FindChild("brim_x_b"));
+			boxSides.Add(diceBox.transform.FindChild("brim_z_a"));
+			boxSides.Add(diceBox.transform.FindChild("brim_z_b"));
+		}
+
+		return boxSides;
+	}
 
 	// -- BattleController
 
@@ -50,10 +64,6 @@ public class UtilitiesScript : MonoBehaviour {
 		BattleController().StartBattle();
 	}
 
-	public void AwardRewards()
-	{
-		BattleController().AwardRewards();
-	}
 
 	public List<BattleActor> getBattleEnemies()
 	{
@@ -100,6 +110,11 @@ public class UtilitiesScript : MonoBehaviour {
 		BattleController().SelectedEnemy(actor);
 	}
 
+	public void BattleOverTest(bool bPlayerIsWinner)
+	{
+		BattleController().BattleOverTest(bPlayerIsWinner);
+	}
+
 	// -- Dice Controller
 
 	DiceControllerScript diceControllerScript;
@@ -111,9 +126,9 @@ public class UtilitiesScript : MonoBehaviour {
 		return diceControllerScript;
 	}
 
-	public void ThrowDice(Roll roll)
+	public void ThrowDice(Roll roll, bool bLookAt=true)
 	{
-		DiceController().ThrowDice(roll);
+		DiceController().ThrowDice(roll, bLookAt);
 	}
 	public void ClearDice()
 	{
@@ -175,6 +190,10 @@ public class UtilitiesScript : MonoBehaviour {
 		GUIController().RequestFailed(error);
 	}
 
+	public void PlayerIsVictorious(float exp, float change, float kills)
+	{
+		GUIController().PlayerIsVictorious(exp, change, kills);
+	}
 
 	// -- GUI
 
@@ -303,8 +322,31 @@ public class UtilitiesScript : MonoBehaviour {
 		return GameController().getWeaponTypes(level);
 	}
 
+	/*
 	public EnemyDefinition getEnemy(string enemyName)
 	{
 		return GameController().getEnemy(enemyName);
+	}
+	*/
+
+	
+	public List<EnemyDefinition> getEnemiesPerLevel(int level)
+	{
+		return GameController().getEnemiesPerLevel(level);
+	}
+
+	public List<EnemyDefinition> getBossPerLevel(int level)
+	{
+		return GameController().getBossPerLevel(level);
+	}
+
+	public EnemyDefinition getEnemyByName(int level, string enemyName)
+	{
+		return GameController().getEnemyByName(level, enemyName);
+	}
+
+	public EnemyDefinition getBossByName(int level, string bossName)
+	{
+		return GameController().getBossByName(level, bossName);
 	}
 }

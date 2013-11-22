@@ -11,12 +11,13 @@ using Character = BattleControllerScript.Player;
 using BattleRound = BattleControllerScript.BattleRound;
 using Player = BattleControllerScript.Player;
 using ScoreoidPlayer = ScoreoidInterface.ScoreoidPlayer;
+using Roll = DiceControllerScript.Roll;
 
 
 public class GUIControllerScript : MonoBehaviour {
 
 	private static int GUI_SCREEN_BORDER = 15;
-	private static int GUI_TEXTFIELD_PAD = 25;
+	//private static int GUI_TEXTFIELD_PAD = 25;
 	//private static int GUI_BATTLESTAT_PAD = 20;
 
 	float leafOffset;
@@ -38,14 +39,14 @@ public class GUIControllerScript : MonoBehaviour {
 	float spikeCount;
 
 	//if you're using the spikes you'll need to find sizes that work well with them these are a few...
-	Rect actionSelectionRect = new Rect (600, 420, 500, 300);
-	Rect battleTextRect = new Rect (10, 420, 500, 300);
-	Rect battleQueueRect = new Rect (850, 0, 250, 300);
-	Rect battleStatsRect = new Rect (0, 40, 350, 500);
+	Rect actionSelectionRect /*= new Rect (600, 420, 500, 300)*/;
+	Rect battleTextRect /*= new Rect (10, 420, 500, 300)*/;
+	Rect battleQueueRect/* = new Rect (850, 0, 250, 300)*/;
+	Rect battleStatsRect/* = new Rect (0, 40, 350, 500)*/;
 
-	float HroizSliderValue = 0.5f;
-	float VertSliderValue = 0.5f;
-	bool ToggleBTN = false;
+	//float HroizSliderValue = 0.5f;
+	//float VertSliderValue = 0.5f;
+	//bool ToggleBTN = false;
 
 	public GUISkin guiSkin;
 	public GUIText BattleTextPrefab;
@@ -57,9 +58,30 @@ public class GUIControllerScript : MonoBehaviour {
 
 	string characterNameInput;
 	string passwordInput;
-	string loginMessage;
+	string responseMessage;
 
 	bool bSubmitted;
+
+	bool bThrowingDice;
+	int diceCount;
+	float diceThrowTimer;
+
+	List<Weapon> randomWeaponChoices;
+
+	string currentDie = "d4";
+	float rewardTickTimer = 0.0f;
+	private static float REWARD_TICK_TIMEOUT = 1;
+
+	static int TITLE_SCREEN_DICE_MAX = 200;
+	static float TITLE_SCREEN_DICE_THROW_TIMEOUT = 8;
+
+	bool bBattleStarted;
+	bool bRewardsAwarded;
+	bool bFinishedRewarding;
+	bool bChangedWeapon;
+	float awardedExp;
+	float awardedChange;
+	float numberOfKills;
 
 	NewCharacter newCharacter;
 
@@ -84,13 +106,14 @@ public class GUIControllerScript : MonoBehaviour {
 			// Reset the inputs between states
 			characterNameInput = "";
 			passwordInput = "";
-			loginMessage = "";
+			responseMessage = "";
 		}
 
 		switch(gameState)
 		{
 		case GameState.Title:
 			GUI_TitleScreen();
+			bThrowingDice = true;
 			break;
 
 		case GameState.Register:
@@ -107,6 +130,7 @@ public class GUIControllerScript : MonoBehaviour {
 			break;
 
 		case GameState.BattleMode:
+			bThrowingDice = false;
 			GUI_BattleMode();
 			break;
 
@@ -151,13 +175,14 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		else if(GameState.BattleOver == gameState)
 		{
-			Utilities().setGameState(GameState.PlayerProfile);
+			responseMessage = "Player Data Saved!";
 		}
 	}
 
 	public void RequestFailed(string error)
 	{
-		loginMessage = error;
+		responseMessage = error;
+		bSubmitted = false;
 	}
 
 
@@ -169,32 +194,157 @@ public class GUIControllerScript : MonoBehaviour {
 		battleText = "";
 		characterNameInput = "";
 		passwordInput = "";
-		loginMessage = "";
+		responseMessage = "";
 
 		bSubmitted = false;
+		bBattleStarted = false;
+		bRewardsAwarded = false;
+		bFinishedRewarding = false;
+		bChangedWeapon = false;
 
 		scrollPosition = new Vector2(0, Mathf.Infinity);
+
+		Utilities().ThrowDice(new Roll("d4", 5), false);
+		Utilities().ThrowDice(new Roll("d6", 5), false);
+		Utilities().ThrowDice(new Roll("d8", 5), false);
+		Utilities().ThrowDice(new Roll("d10", 5), false);
+		Utilities().ThrowDice(new Roll("d12", 5), false);
+		Utilities().ThrowDice(new Roll("d20", 5), false);
+		Utilities().ThrowDice(new Roll("d100", 5), false);
+
+		battleQueueRect 	= new Rect(Screen.width*0.75f,
+										5f,
+										Screen.width*0.25f,
+										Screen.height*0.45f);
+
+		battleTextRect 		= new Rect(Screen.width*0.008f,
+										Screen.height*0.6f,
+										Screen.width*0.4f,
+										Screen.height*0.4f);
+
+		actionSelectionRect = new Rect(Screen.width*0.4f,
+										Screen.height*0.6f,
+										Screen.width*0.6f,
+										Screen.height*0.4f);
+
+		battleStatsRect		= new Rect(Screen.width*0.008f,
+			                             5f,
+			                             Screen.width*0.2f,
+			                             Screen.height*0.55f);
 	}
-	
+
 	// Update is called once per frame
 	void Update ()
 	{
+		if(true == bThrowingDice && TITLE_SCREEN_DICE_MAX > diceCount)
+		{
+			diceThrowTimer += Time.deltaTime;
+			if(TITLE_SCREEN_DICE_THROW_TIMEOUT <= diceThrowTimer)
+			{
+				diceThrowTimer = 0;
+				Utilities().ThrowDice(new Roll(currentDie, Random.Range(1,4)), false);
+				diceCount++;
+				switch(currentDie)
+				{
+				case "d4":
+					currentDie = "d6";
+					break;
+				case "d6":
+					currentDie = "d8";
+					break;
+				case "d8":
+					currentDie = "d10";
+					break;
+				case "d10":
+					currentDie = "d12";
+					break;
+				case "d12":
+					currentDie = "d20";
+					break;
+				case "d20":
+					currentDie = "d100";
+					break;
+				case "d100":
+					currentDie = "d4";
+					break;
+				default:
+					currentDie = "d4";
+					break;
+				}
+			}
+		}
+
+
+		if(bRewardsAwarded)
+		{
+			rewardTickTimer += Time.deltaTime;
+
+			if(REWARD_TICK_TIMEOUT <= rewardTickTimer)
+			{
+				rewardTickTimer = 0;
+
+				Player playerCharacter = Utilities().getCurrentCharacter();
+
+				if(true == bFinishedRewarding)
+				{
+					bRewardsAwarded = false;
+					Utilities().UpdatePlayer(playerCharacter.name,
+											playerCharacter.change,
+											playerCharacter.xp,
+											playerCharacter.kills,
+											playerCharacter.level,
+											playerCharacter.weapon.name);
+				}
+				else
+				{
+					if(0 != awardedExp)
+					{
+						playerCharacter.AddExperience(1);
+						awardedExp -= 1;
+					}
+
+					if(0 != awardedChange)
+					{
+						playerCharacter.AddChange(1);
+						awardedChange -= 1;
+					}
+
+
+					if(0 != numberOfKills)
+					{
+						playerCharacter.AddKills(1);
+						numberOfKills -= 1;
+					}
+
+					if(0 == awardedExp + awardedChange + numberOfKills)
+					{
+						bFinishedRewarding = true;
+					}
+				}
+			}
+		}
 	}
 
 
 	void GUI_TitleScreen()
 	{
+		GUI.skin = guiSkin;
+		Rect titleRect = new Rect(0 + GUI_SCREEN_BORDER,
+								 0 + GUI_SCREEN_BORDER,
+								 Screen.width - GUI_SCREEN_BORDER,
+								 Screen.height - GUI_SCREEN_BORDER);
 
-		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-									 0 + GUI_SCREEN_BORDER,
-									 Screen.width - GUI_SCREEN_BORDER,
-									 Screen.height - GUI_SCREEN_BORDER));
+
+		GUILayout.BeginArea(titleRect);
 		bSubmitted = false;
 
 		GUILayout.BeginVertical();
-		GUILayout.Space(100);
+		GUILayout.Space(50);
+
+		AddSpikes(Screen.width, true);
+
 		GUILayout.Box("Spare Change", "TitleBox");
-		//GUILayout.FlexibleSpace();
+		GUILayout.Space(100);
 		if(GUILayout.Button("Start a New Guy")) 	// TODO: Need a custom style for the menu items
 		{
 			Utilities().setGameState(GameState.Register);
@@ -205,6 +355,7 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		GUILayout.EndVertical();
 
+		AddSpikes(Screen.width, true);
 		GUILayout.EndArea();
 	}
 
@@ -215,13 +366,13 @@ public class GUIControllerScript : MonoBehaviour {
 			bSubmitted = true;
 			if(GameState.Register == Utilities().getGameState())
 			{
-				loginMessage = "Attempting to Register...";
+				responseMessage = "Attempting to Register...";
 				// -- Registration: Step 1 - Attempt to create an account with the user's input
 				Utilities().Register(characterNameInput, passwordInput);
 			}
 			else
 			{
-				loginMessage = "Attempting to Load...";
+				responseMessage = "Attempting to Load...";
 				// -- Attempt to login with the character-name and password
 				Utilities().Login(characterNameInput, passwordInput);
 			}
@@ -231,12 +382,13 @@ public class GUIControllerScript : MonoBehaviour {
 	void GUI_Register_Login()
 	{
 		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-							 0 + GUI_SCREEN_BORDER,
-							 Screen.width - GUI_SCREEN_BORDER,
-							 Screen.height - GUI_SCREEN_BORDER));
+									 0 + GUI_SCREEN_BORDER,
+									 Screen.width - GUI_SCREEN_BORDER,
+									 Screen.height - GUI_SCREEN_BORDER));
 		GUILayout.BeginVertical();
 
-		GUILayout.Space(100);
+		GUILayout.Space(50);
+		AddSpikes(Screen.width, true);
 
 		GUILayout.BeginHorizontal();
 		GUILayout.Box(string.Format("{0}", GameState.Register == Utilities().getGameState() ? "Register New" : "Load"), "TitleBox");
@@ -265,8 +417,8 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.FlexibleSpace();
 
-		if(false == loginMessage.Equals(""))
-			GUILayout.Box(loginMessage);
+		if(false == responseMessage.Equals(""))
+			GUILayout.Box(responseMessage, "LegendaryText");
 
 		GUILayout.FlexibleSpace();
 
@@ -276,19 +428,20 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		GUILayout.EndHorizontal();
 		GUILayout.EndVertical();
-
+		AddSpikes(Screen.width, true);
 		GUILayout.EndArea();
 	}
 
 	void GUI_CharacterSelection()
 	{
 		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-							 0 + GUI_SCREEN_BORDER,
-							 Screen.width - GUI_SCREEN_BORDER,
-							 Screen.height - GUI_SCREEN_BORDER));
-
+									 0 + GUI_SCREEN_BORDER,
+									 Screen.width - GUI_SCREEN_BORDER,
+									 Screen.height - GUI_SCREEN_BORDER));
 		// TODO: Wire the SelectCharacter function to this script
 		GUILayout.FlexibleSpace();
+
+		AddSpikes(Screen.width, true);
 
 		GUILayout.BeginHorizontal();
 
@@ -311,32 +464,35 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 
 		GUILayout.FlexibleSpace();
-
+		AddSpikes(Screen.width, true);
 		GUILayout.EndArea();
 	}
 
 
 	void GUI_PlayerProfile()
 	{
-		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-							 0 + GUI_SCREEN_BORDER,
-							 Screen.width - GUI_SCREEN_BORDER,
-							 Screen.height - GUI_SCREEN_BORDER));
-
 		Player player = Utilities().getCurrentCharacter();
+
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+									 0 + GUI_SCREEN_BORDER,
+									 Screen.width - GUI_SCREEN_BORDER,
+									 Screen.height - GUI_SCREEN_BORDER));
 
 		GUILayout.BeginVertical();
 
 		GUILayout.FlexibleSpace();
-
+		AddSpikes(Screen.width, true);
 		GUILayout.BeginHorizontal();
+		GUILayout.FlexibleSpace();
 		GUILayout.Box(string.Format("Name: {0}\nLevel: {1}\nXP: {2}\nChange: {3}\nWeapon: {4}\nKills: {5}",
 									player.name, player.level, player.xp, player.change, player.weapon.name, player.kills));
+		GUILayout.FlexibleSpace();
 		GUILayout.EndHorizontal();
 
 		GUILayout.FlexibleSpace();
 
 		GUILayout.BeginHorizontal();
+		GUILayout.FlexibleSpace();
 		if(GUILayout.Button("Start Battle"))
 		{
 			// Now that the battle is initialized, switch the gamestate to battle-mode
@@ -350,10 +506,12 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		GUILayout.FlexibleSpace();
 		GUILayout.EndHorizontal();
+		AddSpikes(Screen.width, true);
 
-		GUILayout.FlexibleSpace();
 
 		GUILayout.EndVertical();
+
+		GUILayout.FlexibleSpace();
 
 		GUILayout.EndArea();
 	}
@@ -389,10 +547,13 @@ public class GUIControllerScript : MonoBehaviour {
 	
 	void GUI_BattleMode_playerSelectTarget()
 	{
+		int enemyCount = 0;
+
 		GUILayout.Box("Select a Target", "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
 		////
+		GUILayout.BeginVertical();
 		GUILayout.BeginHorizontal();
 		foreach(BattleActor enemy in Utilities().getBattleEnemies())
 		{
@@ -401,12 +562,23 @@ public class GUIControllerScript : MonoBehaviour {
 				// The action chosen will have an impact on who the possible targets can be
 				Utilities().SelectedEnemy(enemy);
 			}
+
+			enemyCount++;
+
+			if(2 == enemyCount)
+			{
+				enemyCount = 0;
+				GUILayout.EndHorizontal();
+				GUILayout.BeginHorizontal();
+			}
 		}
 		if(GUILayout.Button("Back"))
 		{
 			Utilities().setBattleRoundState(BattleRound.State.SelectAction);
 		}
 		GUILayout.EndHorizontal();
+
+		GUILayout.EndVertical();
 		////
 		GUILayout.FlexibleSpace();
 		////
@@ -430,7 +602,8 @@ public class GUIControllerScript : MonoBehaviour {
 	
 	void GUI_BattleMode_BattleText(int windowID)
 	{
-		GUILayout.Space(8);
+		AddSpikes(battleTextRect.width);
+		//GUILayout.Space(2);
 
 		GUILayout.BeginHorizontal();
 		
@@ -443,7 +616,7 @@ public class GUIControllerScript : MonoBehaviour {
 	
 	void GUI_BattleMode_BattleQueue(int windowID)
 	{
-		GUILayout.Space(32);
+		AddSpikes(battleQueueRect.width);
 
 		GUILayout.BeginVertical();
 
@@ -452,36 +625,53 @@ public class GUIControllerScript : MonoBehaviour {
 
 		if(null != currentTurn)
 		{
-			GUILayout.Box(string.Format("({0}) {1}", Utilities().getCurrentTurnActor().remainingHealth, Utilities().getCurrentTurnActor().name), "BattleQueue");
+			GUILayout.BeginHorizontal();
+			GUILayout.Box(string.Format("({0})", Utilities().getCurrentTurnActor().remainingHealth), "BattleQueue");
+			GUILayout.Box(string.Format("{0}", Utilities().getCurrentTurnActor().name), "BattleQueue");
+			GUILayout.EndHorizontal();
 		}
 
 		if(null != queue)
 		{
 			foreach(BattleRound round in queue)
 			{
-				GUILayout.Box(string.Format("({0}) {1}", round.actor.remainingHealth, round.actor.name), "BattleQueue");
+				GUILayout.BeginHorizontal();
+				GUILayout.Box(string.Format("({0})", round.actor.remainingHealth), "BattleQueue");
+				GUILayout.Box(string.Format("{0}", round.actor.name), "BattleQueue");
+				GUILayout.EndHorizontal();
 			}
 		}
 		
 		GUILayout.EndVertical();
 	}
-
-	/*
+	
 	void GUI_BattleMode_BattleStat(BattleActor actor)
 	{
+		/*
 		// Frame
-		GUILayout.Box("", "FrameBox");
+		GUILayout.Box("");
 		// Meter
 		Rect tempRect = GUILayoutUtility.GetLastRect();
 		tempRect.x += GUI_BATTLESTAT_PAD;
 		tempRect.width -= GUI_BATTLESTAT_PAD*2;
 		tempRect.y += GUI_BATTLESTAT_PAD;
 		tempRect.height -= GUI_BATTLESTAT_PAD*2;
-		GUI.Box(tempRect, "", "MeterBox");
+
+		GUILayout.BeginHorizontal();
+		GUI.Box(tempRect, "");
+		GUILayout.Space(tempRect.width - ((actor.remainingHealth/actor.health) * tempRect.width));
+		GUILayout.EndHorizontal();
+
 		// Cutout
-		GUI.Box(tempRect, "", "CutoutBox");
+		GUI.Box(tempRect, "");
 		// Name
-		GUI.Box(tempRect, actor.name);
+		GUI.BeginGroup(tempRect);
+
+		GUILayout.Box(actor.name, "LegendaryText");
+		GUI.EndGroup();
+		*/
+
+		GUILayout.Box(string.Format("{0} : ({1})", actor.name,actor.remainingHealth));
 	}
 
 	void GUI_BattleMode_BattleStats(int windowID)
@@ -498,15 +688,13 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.Space(20);
 		
-		GUI_BattleStat(Utilities().getCurrentCharacter());
+		GUI_BattleMode_BattleStat(Utilities().getCurrentCharacter());
 		
 		GUILayout.FlexibleSpace();
 		
 		GUILayout.EndVertical();
 	}
-	*/
-
-	bool bBattleStarted = false;
+	
 	void GUI_BattleMode_actionSelection(int windowID)
 	{
 		AddSpikes(actionSelectionRect.width);
@@ -555,6 +743,13 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void GUI_BattleMode()
 	{
+		/*
+		// Test button TODO Remove
+		if(GUI.Button(new Rect(Screen.width*0.45f, Screen.height*0.4f, Screen.width*0.1f, Screen.height*0.1f), "End Battle"))
+		{
+			Utilities().BattleOverTest(true);
+		}
+		*/
 
 		actionSelectionRect = GUI.Window(0, actionSelectionRect, GUI_BattleMode_actionSelection, "Actions");
 	 	//now adjust to the group. (0,0) is the topleft corner of the group.
@@ -566,47 +761,129 @@ public class GUIControllerScript : MonoBehaviour {
 		battleQueueRect = GUI.Window(2, battleQueueRect, GUI_BattleMode_BattleQueue, "Battle Queue");
 
 		//battleStatsRect = GUI.Window(3, battleStatsRect, GUI_BattleMode_BattleStats, "");
+	}
 
-		/*
-		GUILayout.BeginVertical();
-		GUI_BattleMode_BattleText();
-		
-		
-		GUILayout.BeginHorizontal();
-		////
-		
-		GUILayout.FlexibleSpace();
-		GUI_BattleMode_BattleQueue();
-		GUILayout.Space(5);
-		//GUI_BattleStats();
+	List<Weapon> GetRandomWeaponOptions(int level, int count)
+	{
+		List<Weapon> allWeaponsForLevel = Utilities().getWeaponTypes(level);
 
-		////
-		GUILayout.EndHorizontal();
-		*/
+		List<Weapon> randomSelection = new List<Weapon>();
 
+		for(int w=0; w < count; w++)
+		{
+			randomSelection.Add(allWeaponsForLevel[Random.Range(0,randomSelection.Count)]);
+		}
 
-
-
-		/*
-		GUILayout.EndVertical();
-		*/
+		return randomSelection;
 	}
 	
 	void GUI_BattleOver()
 	{
-		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
-							 0 + GUI_SCREEN_BORDER,
-							 Screen.width - GUI_SCREEN_BORDER,
-							 Screen.height - GUI_SCREEN_BORDER));
-
 		Character playerCharacter = Utilities().getCurrentCharacter();
 
+		if(null == randomWeaponChoices || 0 == randomWeaponChoices.Count)
+		{
+			randomWeaponChoices = GetRandomWeaponOptions(Utilities().getCurrentCharacter().level, 3);
+		}
+
+		GUILayout.BeginArea(new Rect(0 + GUI_SCREEN_BORDER,
+									 0 + GUI_SCREEN_BORDER,
+									 Screen.width - GUI_SCREEN_BORDER,
+									 Screen.height - GUI_SCREEN_BORDER));
+
+
 		GUILayout.BeginVertical();
+		GUILayout.Space(10);
+
+		AddSpikes(Screen.width, true);
+
 		GUILayout.Box("Battle Over", "TitleBox"); 		//TODO: Need a custom style for the title
-		GUILayout.Box(string.Format("{0} is the victor",
-									(playerCharacter.remainingHealth > 0 ? playerCharacter.name : "The Enemy")));
+		GUILayout.Box(string.Format("{0} the victor",
+									(playerCharacter.remainingHealth > 0 ? playerCharacter.name + " is" : "The Enemy was")),
+		              				"LegendaryText");
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Space(15);
+		
+		GUILayout.BeginVertical();
+		GUILayout.Label(string.Format("Spare Change: {0}", playerCharacter.change), "LegendaryText");
+		GUILayout.Space(5);
+		GUILayout.Label(string.Format("Experience: {0}", playerCharacter.xp), "LegendaryText");
+		GUILayout.Space(5);
+		GUILayout.Label(string.Format("Kills: {0}", playerCharacter.kills), "LegendaryText");
+		GUILayout.EndVertical();
+
+		GUILayout.Space(15);
+
+		if(true == bFinishedRewarding)
+		{
+			if(false == bChangedWeapon)
+			{
+				// Show possible weapon change options, here
+				GUILayout.BeginHorizontal();
+				GUILayout.Space(15);
+				GUILayout.BeginVertical();
+				GUILayout.Label("Change Weapons?");
+				
+				foreach(Weapon weapon in randomWeaponChoices)
+				{
+					if(GUILayout.Button(string.Format("{0} : Cost({1})", weapon.name, 3*weapon.level)))
+					{
+						bChangedWeapon = true;
+						
+						randomWeaponChoices = new List<Weapon>(); // Clear the weapon choices
+						
+						playerCharacter.changeWeapon(weapon);
+						
+						Utilities().UpdatePlayer(playerCharacter.name,
+						                         playerCharacter.change,
+						                         playerCharacter.xp,
+						                         playerCharacter.kills,
+						                         playerCharacter.level,
+						                         playerCharacter.weapon.name);
+					}
+				}
+				
+				GUILayout.EndVertical();
+				GUILayout.Space(15);
+				GUILayout.EndHorizontal();
+			}
+		}
+
+		GUILayout.EndHorizontal();
+		
+
+		if(true == bFinishedRewarding)
+		{
+			GUILayout.BeginHorizontal();
+
+			if(GUILayout.Button("Return to Player Profile"))
+			{
+				Utilities().setGameState(GameState.PlayerProfile);
+			}
+
+			GUILayout.EndHorizontal();
+		}
+
+		GUILayout.FlexibleSpace();
+			
+		if(false == responseMessage.Equals(""))
+			GUILayout.Box(responseMessage, "LegendaryText");
+
+		AddSpikes(Screen.width, true);
+
 		GUILayout.EndVertical();
 		GUILayout.EndArea();
+	}
+	
+	public void PlayerIsVictorious(float exp, float change, float kills)
+	{
+		bRewardsAwarded = true;
+		bFinishedRewarding = false;
+
+		awardedExp = exp;
+		awardedChange = change;
+		numberOfKills = kills;
 	}
 
 
@@ -633,17 +910,22 @@ public class GUIControllerScript : MonoBehaviour {
 
 	// -- Necromancer Style
 
-	void AddSpikes(float winX)
+	void AddSpikes(float winX, bool bFullScreen=false)
 	{
-		spikeCount = Mathf.Floor(winX - 152)/22;
+		int pad = 152;
+
+		if(true == bFullScreen)
+		{
+			pad = 80;
+		}
+
+		spikeCount = Mathf.Floor(winX - pad)/22;
 		GUILayout.BeginHorizontal();
 		GUILayout.Label ("", "SpikeLeft");//-------------------------------- custom
-		/*
 		for (int i = 0; i < spikeCount; i++)
         {
 			GUILayout.Label ("", "SpikeMid");//-------------------------------- custom
         }
-        */
 		GUILayout.Label ("", "SpikeRight");//-------------------------------- custom
 		GUILayout.EndHorizontal();
 	}

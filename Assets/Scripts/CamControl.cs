@@ -96,6 +96,8 @@ public class CamControl : MonoBehaviour {
 																 diceBoxPosition.z),
 													 45*Time.deltaTime);
 		}
+
+
 	}
 	
 	UtilitiesScript utilitiesScript;

@@ -59,38 +59,58 @@ public class DiceControllerScript : MonoBehaviour {
 	/// <param name='diceBox'>
 	/// Dice box.
 	/// </param>
-	public void ThrowDice(Roll roll)
+	public void ThrowDice(Roll roll, bool bLookAt=true)
 	{
 		//TODO: Many a magic number in this function
-		
-		Transform diceBox = Utilities().getDiceBox().transform;
-		
-		ClearDice();
-		
-		// Calculate the start position from the position of the box
-		Vector3 startPosition = new Vector3(diceBox.position.x + diceBox.localScale.x*4,
-											diceBox.position.y + 50,
-											diceBox.position.z + diceBox.localScale.z*4);
+
+		if(true == bLookAt || null == dice)
+			ClearDice();
 		
 		for(int d=0; d < roll.count; d++)
 		{
 			GameObject die = CreateDie(roll.dieName);
-			
+			Vector3 direction = Vector3.one;
+			Vector3 sideways = Vector3.one;
+
+			Transform sideFromWhichToThrow = Utilities().getDiceBoxSides()[Random.Range(0,Utilities().getDiceBoxSides().Count)];
+
 			// Position
-			die.transform.position = startPosition;
-			die.rigidbody.velocity = diceBox.right * 15 + diceBox.forward * -30;
+			die.transform.position = new Vector3(sideFromWhichToThrow.position.x,
+												sideFromWhichToThrow.position.y + 50,
+												sideFromWhichToThrow.position.z);
+
+			if(sideFromWhichToThrow.name.Contains("x_a"))
+			{
+				direction = sideFromWhichToThrow.right;
+				sideways = sideFromWhichToThrow.forward;
+			}
+			else if(sideFromWhichToThrow.name.Contains("x_b"))
+			{
+				direction = sideFromWhichToThrow.right * -1;
+				sideways = sideFromWhichToThrow.forward * -1;
+			}
+			else if(sideFromWhichToThrow.name.Contains("z_a"))
+			{
+				direction = sideFromWhichToThrow.forward;
+				sideways = sideFromWhichToThrow.right * -1;
+			}
+			else if(sideFromWhichToThrow.name.Contains("z_b"))
+			{
+				direction = sideFromWhichToThrow.forward * -1;
+				sideways = sideFromWhichToThrow.right;
+			}
+
+			die.rigidbody.velocity = sideways * 30 + direction * 60;
 			
 			// Orientation
 			die.transform.rotation = Quaternion.LookRotation(Random.onUnitSphere);
 			die.rigidbody.angularVelocity = Vector3.right * -15;
 
 			dice.Add(die);
-
-			// Position subsequent dice adjacently
-			startPosition = startPosition + new Vector3(die.transform.localScale.x + 1, 0, 0);
 		}
 
-		Utilities().LookAtDice(dice);
+		if(true == bLookAt)
+			Utilities().LookAtDice(dice);
 	}
 
 

@@ -16,14 +16,10 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		public string name {get;set;}
 		public Weapon weapon {get;set;}
+		public int health {get;set;}
 		public int remainingHealth {get;set;}
 		public int speed {get;set;}
 		public int defense {get;set;}
-
-		public void addDamage(int dmg)
-		{
-			remainingHealth = dmg;
-		}
 
 		public BattleActor(string actorName, Weapon actorWeapon)
 		{
@@ -31,19 +27,24 @@ public class BattleControllerScript : MonoBehaviour {
 			weapon = actorWeapon;
 			remainingHealth = 1;			// Default
 			speed = 5;						// Default
-			defense = 5;					// Default
+			defense = 2;					// Default
 		}
 
 		public BattleActor(string actorName, Weapon actorWeapon, int actorHealth, int actorSpeed, int actorDefense)
 		{
 			name = actorName;
 			weapon = actorWeapon;
-			remainingHealth = actorHealth;	// Default
-			speed = actorSpeed;				// Default
-			defense = actorDefense;			// Default
+			health = remainingHealth = actorHealth;
+			speed = actorSpeed;
+			defense = actorDefense;
+		}
+		
+		public void addDamage(int dmg)
+		{
+			remainingHealth -= dmg;
 		}
 
-		public void ChangeWeapon(Weapon theWeapon)
+		public void changeWeapon(Weapon theWeapon)
 		{
 			// Set this as the current weapon
 			weapon = theWeapon; // Accept the change
@@ -52,6 +53,16 @@ public class BattleControllerScript : MonoBehaviour {
 		public List<Attack> getActions()
 		{
 			return new List<Attack>(weapon.attacks.Values);
+		}
+
+		public int getDefense()
+		{
+			return defense + weapon.defenseModifier;
+		}
+
+		public int getSpeed()
+		{
+			return speed + weapon.speedModifier;
 		}
 	}
 
@@ -108,14 +119,16 @@ public class BattleControllerScript : MonoBehaviour {
 		public int kills {get;set;}
 		public bool bLeveledUp {get;set;}
 
-		public Player(string playerName, Weapon playerWeapon, float playerXp, int playerLevel, float playerChange, int playerKills) : base(playerName, playerWeapon)
+		public Player(string playerName, Weapon playerWeapon, float playerXp, int playerLevel, float playerChange, int playerKills)
+			: base(playerName, playerWeapon)
 		{
 			name = playerName;
 			xp = playerXp;
 			level = playerLevel;
 			change = playerChange;
 			kills = playerKills;
-			remainingHealth = 30 * (int)(1 + level*0.1f);
+			health = 30 * (int)(1 + level*0.1f);
+			remainingHealth = health;
 		}
 
 		public void AddChange(float amountOfChange)
@@ -138,6 +151,11 @@ public class BattleControllerScript : MonoBehaviour {
 		public void AddKills(int killCount)
 		{
 			kills += killCount;
+		}
+
+		public double getChange()
+		{
+			return change;
 		}
 	}
 
@@ -257,6 +275,8 @@ public class BattleControllerScript : MonoBehaviour {
 		accruedExperience = 0.0f;
 		accruedChange = 0.0f;
 		killsThisBattle = 0;
+
+		enemies = new List<BattleActor>();
 	}
 
 	void Update()
@@ -324,19 +344,63 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.state = state;
 	}
 
+	void GenerateBattle(bool bBossFight=false)
+	{
+		List<BattleActor> opponents = new List<BattleActor>();
+		int numberOfEnemies = 0;
+
+		if(true == bBossFight)
+		{
+			List<EnemyDefinition> possibleEnemies = Utilities().getBossPerLevel(playerCharacter.level);
+
+			opponents.Add(new Enemy(possibleEnemies[Random.Range(0, possibleEnemies.Count)]));
+		}
+		else
+		{
+			List<EnemyDefinition> possibleEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
+
+			while(3 > numberOfEnemies)
+			{
+				EnemyDefinition enemyType = possibleEnemies[Random.Range(0, possibleEnemies.Count)];
+
+				if(enemyType.level < playerCharacter.level)
+				{
+					opponents.Add(new Enemy(enemyType));
+					opponents.Add(new Enemy(enemyType));
+				}
+				else
+				{
+					opponents.Add(new Enemy(enemyType));
+				}
+
+				numberOfEnemies++;
+			}
+		}
+
+		// Set the enemies for the battle to use
+		enemies = opponents;
+	}
 
 	/// <summary>
 	/// Starts the battle.
 	/// </summary>
 	public void StartBattle()
 	{
+		//bool bBossFight = false;
+
+		// Clear the title-screen dice
+		Utilities().ClearDice();
+
 		// Player Character
 		playerCharacter = Utilities().getCurrentCharacter();
 
+		/*
 		Dictionary<string, int> enemyTypes = new Dictionary<string, int>();
 		enemyTypes.Add("Stabby", 1);	// TODO: Don't have hard-coded enemies, here, unless the types were created here.
 		enemyTypes.Add("Bathead", 1);
 		CreateEnemies(enemyTypes);
+		*/
+		GenerateBattle();
 
 		// Initialize the battleQueue
 		InitializeQueue();
@@ -350,6 +414,7 @@ public class BattleControllerScript : MonoBehaviour {
 		
 	}
 
+	// Deprecated
 	void CreateEnemies(Dictionary<string, int> enemyTypes)
 	{
 		enemies = new List<BattleActor>();
@@ -358,20 +423,30 @@ public class BattleControllerScript : MonoBehaviour {
 			// Create 'count' of 'enemyName' type of enemy-definition
 			for(int count=0; count < enemyTypes[enemyName]; count++)
 			{
-				enemies.Add(new Enemy(Utilities().getEnemy(enemyName)));
+				Debug.Log("getEnemy - deprecated");
+ 				//enemies.Add(new Enemy(Utilities().getEnemy(enemyName)));
 			}
 		}
 	}
 
-	//,- Battle Queue
+	// -- Battle Queue
 
 	void InitializeQueue()
 	{
+		string enemyBaseName = "";
+		int nameCount = 0;
 		roundCount = 0;
 		battleActorTurnCounts = new Dictionary<string, int>();
 		battleActorTurnCounts.Add(playerCharacter.name, 1);
 		foreach(BattleActor enemy in enemies)
 		{
+			nameCount = 2; // Because we don't number the first one
+			enemyBaseName = enemy.name;
+			while(battleActorTurnCounts.ContainsKey(enemy.name))
+			{
+				enemy.name = string.Format("{0} {1}", enemyBaseName, nameCount);
+				nameCount++;
+			}
 			battleActorTurnCounts.Add(enemy.name, 1);
 		}
 
@@ -428,8 +503,8 @@ public class BattleControllerScript : MonoBehaviour {
 		foreach(BattleActor enemy in enemies)
 		{
 			// Compare the current actor with initiative to the enemy, select the min of the two
-			if(battleActorTurnCounts[actorWithInitiative.name] * actorWithInitiative.speed
-				> battleActorTurnCounts[enemy.name] * enemy.speed)
+			if(battleActorTurnCounts[actorWithInitiative.name] * actorWithInitiative.getSpeed()
+				> battleActorTurnCounts[enemy.name] * enemy.getSpeed())
 			{
 				actorWithInitiative = enemy;
 			}
@@ -508,7 +583,7 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.numberOfDamageDiceStillRolling = roll.count;
 
 		Utilities().AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
-		Utilities().ThrowDice(roll);
+		Utilities().ThrowDice(roll, true);
 	}
 
 	
@@ -528,26 +603,36 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </param>
 	public void DiceRolled(GameObject die, int rollValue)
 	{
+		//TODO: Magic Numbers
+
 		// The following logic is only for in the Act state
 		if(null != currentTurn && BattleRound.State.Act == currentTurn.state)
 		{
 			currentTurn.numberOfDamageDiceStillRolling--;
-			
+
+			/************************** Chance To Hit ******************************/
 			// If a die roll comes back, bRolledChanceToHit is false, and its a d20,
 			//	==> this is the chance-to-hit result.
 			if(!currentTurn.bRolledChanceToHit && die.name.Contains("d20"))
 			{
 				currentTurn.bRolledChanceToHit = true;
-				
-				// Check if the rolled value was enough to hit the target
-				if(rollValue > 10)
+				int actorHitModifier = currentTurn.selectedAction.hitModifier;
+				int targetDefenseModifier = currentTurn.targetedActor.getDefense();
+				// Check if the rolled value was enough to hit the target (factoring in the action's hit modifier)
+				if(rollValue  + actorHitModifier - targetDefenseModifier > 15)
 				{
 					// TODO: Create a "HIT" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
-					Utilities().SpawnPts("Hit", v.x - 0.25f, v.y, hitTextColor); // 100 points picked
+					Utilities().SpawnPts("Hit", v.x - 0.15f, v.y, hitTextColor);
+
+					if(0 != currentTurn.selectedAction.hitModifier)
+					{
+						Utilities().SpawnPts("Hit", v.x - 0.2f, v.y + 1, hitTextColor);
+					}
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("{0} > 10, Hit!", rollValue));
+					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) >= 15, Hit!",
+					                             rollValue, actorHitModifier, targetDefenseModifier));
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
 					currentTurn.bPlayerActed = false;
@@ -556,20 +641,43 @@ public class BattleControllerScript : MonoBehaviour {
 				}
 				else
 				{
+					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) < 15, Missed!",
+					                             rollValue, actorHitModifier, targetDefenseModifier));
+
 					// TODO: Create a "Miss" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
-					Utilities().SpawnPts("Miss", v.x - 0.25f, v.y, missTextColor); // 100 points picked
+					Utilities().SpawnPts("Miss", v.x - 0.15f, v.y, missTextColor);
 					
 					// Hit was unsuccessful, end turn
 					FinishTurn();
 				}
 			}
+			/************************** Damage *************************************/
 			else if(true == currentTurn.bChanceToHitSuccess)
 			{
+				int damageAmount = rollValue;
+				int weaponDamageMod = currentTurn.actor.weapon.dmgModifier;
+				int attackDamageMod = (currentTurn.selectedAction as Attack).damageModifier;
+				string battleTextstring = string.Format("roll:{0}", rollValue);
+
+				damageAmount += weaponDamageMod;
+				if(0 < weaponDamageMod)
+					string.Concat(string.Format("weapon-modifier:{0}", weaponDamageMod));
+
+				damageAmount += attackDamageMod;
+				if(0 < attackDamageMod)
+					string.Concat(string.Format("attack-modifier:{0}", attackDamageMod));
+
 				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
-				Utilities().SpawnPts(rollValue.ToString(), v.x - 0.25f, v.y, damageTextColor); // 100 points picked
-				currentTurn.rolledDamage += rollValue;
-				
+
+				Utilities().SpawnPts(damageAmount.ToString(), v.x - 0.25f, v.y, damageTextColor);
+
+
+				currentTurn.rolledDamage = damageAmount;
+
+				Utilities().AppendBattleText(string.Format("{0}, Damage to {1}",
+				                                          	battleTextstring, currentTurn.targetedActor.name));
+
 				if(0 == currentTurn.numberOfDamageDiceStillRolling)
 				{
 					FinishTurn();
@@ -584,19 +692,7 @@ public class BattleControllerScript : MonoBehaviour {
 		accruedExperience += exp;
 		killsThisBattle += kills;
 	}
-	
-	public void AwardRewards()
-	{
-		playerCharacter.AddExperience(accruedExperience);
-		playerCharacter.AddChange(accruedChange);
-		playerCharacter.AddKills(killsThisBattle);
-		Utilities().UpdatePlayer(playerCharacter.name,
-								playerCharacter.change,
-								playerCharacter.xp,
-								playerCharacter.kills,
-								playerCharacter.level,
-								playerCharacter.weapon.name);
-	}
+
 	
 	/// <summary>
 	/// Finishs the turn.
@@ -605,12 +701,12 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
 		{
-			currentTurn.targetedActor.remainingHealth -= currentTurn.rolledDamage;
+			currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
 			
 			if(0 >= playerCharacter.remainingHealth)
 			{
 				// Gameover man...
-				Utilities().setGameState(GameState.BattleOver);
+				BattleOver(false);
 			}
 			
 			List<BattleActor> killed = new List<BattleActor>();
@@ -645,20 +741,31 @@ public class BattleControllerScript : MonoBehaviour {
 			
 			if(0 == enemies.Count)
 			{
-				Utilities().setGameState(GameState.BattleOver);
-				AwardRewards();
+				BattleOver(true);
 			}
-			
-			Utilities().AppendBattleText(string.Format("{0} Damage to {1}", currentTurn.rolledDamage, currentTurn.targetedActor.name));
-		}
-		else
-		{
-			Utilities().AppendBattleText("Missed");
 		}
 		
 		NextTurn();
 	}
 
+	void BattleOver(bool bPlayerIsWinner)
+	{
+		Utilities().setGameState(GameState.BattleOver);
+		if(true == bPlayerIsWinner)
+		{
+			Utilities().PlayerIsVictorious(accruedExperience, accruedChange, killsThisBattle);
+		}
+
+		Utilities().ClearDice();
+	}
+
+	// This is just for testing the battle-over screen without going through a battle
+	public void BattleOverTest(bool bPlayerIsWinner)
+	{
+		AccrueRewards(3, 10, 5);
+
+		BattleOver(bPlayerIsWinner);
+	}
 	
 	UtilitiesScript utilitiesScript;
 	

@@ -18,7 +18,7 @@ public class RollValueDeciderScript : MonoBehaviour {
 	/// </param>
 	public void GotValue(string faceName)
 	{
-		currentValue = faceValues[faceName];
+		faceValues.TryGetValue(faceName, out currentValue);
 	}
 	
 	void Update ()
