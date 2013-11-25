@@ -344,10 +344,10 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.state = state;
 	}
 
-	void GenerateBattle(bool bBossFight=false)
+	void GenerateBattle(bool bBossFight=false, int numberOfEnemies=3)
 	{
 		List<BattleActor> opponents = new List<BattleActor>();
-		int numberOfEnemies = 0;
+		int numberOfEnemiesCreated = 0;
 
 		if(true == bBossFight)
 		{
@@ -359,7 +359,7 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			List<EnemyDefinition> possibleEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
 
-			while(3 > numberOfEnemies)
+			while(numberOfEnemies > numberOfEnemiesCreated)
 			{
 				EnemyDefinition enemyType = possibleEnemies[Random.Range(0, possibleEnemies.Count)];
 
@@ -373,7 +373,7 @@ public class BattleControllerScript : MonoBehaviour {
 					opponents.Add(new Enemy(enemyType));
 				}
 
-				numberOfEnemies++;
+				numberOfEnemiesCreated++;
 			}
 		}
 
@@ -582,7 +582,9 @@ public class BattleControllerScript : MonoBehaviour {
 		// Collect the dice into a list
 		currentTurn.numberOfDamageDiceStillRolling = roll.count;
 
-		Utilities().AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
+		Utilities().TransitionBattleWindowsOff();
+
+		//Utilities().AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
 		Utilities().ThrowDice(roll, true);
 	}
 
@@ -615,11 +617,13 @@ public class BattleControllerScript : MonoBehaviour {
 			//	==> this is the chance-to-hit result.
 			if(!currentTurn.bRolledChanceToHit && die.name.Contains("d20"))
 			{
+				Utilities().TransitionBattleWindowsOn();
+
 				currentTurn.bRolledChanceToHit = true;
 				int actorHitModifier = currentTurn.selectedAction.hitModifier;
 				int targetDefenseModifier = currentTurn.targetedActor.getDefense();
 				// Check if the rolled value was enough to hit the target (factoring in the action's hit modifier)
-				if(rollValue  + actorHitModifier - targetDefenseModifier > 10)
+				if(rollValue  + actorHitModifier - targetDefenseModifier >= 10)
 				{
 					// TODO: Create a "HIT" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
@@ -631,7 +635,7 @@ public class BattleControllerScript : MonoBehaviour {
 					}
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) >= 10, Hit!",
+					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} >= 10, Hit!",
 					                             rollValue, actorHitModifier, targetDefenseModifier));
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
@@ -641,7 +645,7 @@ public class BattleControllerScript : MonoBehaviour {
 				}
 				else
 				{
-					Utilities().AppendBattleText(string.Format("(Roll:{0}) + (Weapon:{1}) - (EnemyDef:{2}) < 10, Missed!",
+					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} < 10, Missed!",
 					                             rollValue, actorHitModifier, targetDefenseModifier));
 
 					// TODO: Create a "Miss" text
@@ -656,7 +660,7 @@ public class BattleControllerScript : MonoBehaviour {
 			else if(true == currentTurn.bChanceToHitSuccess)
 			{
 				int damageAmount = rollValue;
-				int weaponDamageMod = currentTurn.actor.weapon.dmgModifier;
+				int weaponDamageMod = currentTurn.actor.weapon.damageModifier;
 				int attackDamageMod = (currentTurn.selectedAction as Attack).damageModifier;
 				string battleTextstring = string.Format("roll:{0}", rollValue);
 
@@ -699,6 +703,8 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </summary>
 	void FinishTurn()
 	{
+		Utilities().TransitionBattleWindowsOn();
+
 		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
 		{
 			currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
@@ -751,9 +757,14 @@ public class BattleControllerScript : MonoBehaviour {
 	void BattleOver(bool bPlayerIsWinner)
 	{
 		Utilities().setGameState(GameState.BattleOver);
+
 		if(true == bPlayerIsWinner)
 		{
 			Utilities().PlayerIsVictorious(accruedExperience, accruedChange, killsThisBattle);
+		}
+		else
+		{
+			Utilities().EnemyIsVictorious();
 		}
 
 		Utilities().ClearDice();

@@ -42,49 +42,48 @@ public class GameControllerScript : MonoBehaviour {
 		weapons[weaponLevel] = new Dictionary<string, Weapon>();
 
 		/// Melee
-		Weapon bat = new Weapon("Bat", Weapon.Type.Melee, 1, 0, 0, weaponLevel);
-		bat.AddAttack(new Attack("Swing", new Roll("d6",1)));
+		Weapon bat = new Weapon("Bat", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d6",1));
+		bat.AddAttack(new Attack("Swing", bat.roll));
 		weapons[weaponLevel].Add(bat.name, bat);
 
-		Weapon knife = new Weapon("Knife", Weapon.Type.Melee, 1, -1, 0, weaponLevel);
-		knife.AddAttack(new Attack("Swing", new Roll("d4",1)));
-		knife.AddAttack(new Attack("Stab", new Roll("d4",1)));
+		Weapon knife = new Weapon("Knife", Weapon.Type.Melee, 1, -1, 0, weaponLevel, new Roll("d4",1));
+		knife.AddAttack(new Attack("Swing", knife.roll));
+		knife.AddAttack(new Attack("Stab", knife.roll));
 		weapons[weaponLevel].Add(knife.name, knife);
 
-		Weapon nunchucks = new Weapon("Nunchucks", Weapon.Type.Melee, 1, 0, 0, weaponLevel);
-		nunchucks.AddAttack(new Attack("Swing", new Roll("d4", 2), 0, 1));
-		nunchucks.AddAttack(new Attack("Strike", new Roll("d4", 2), 1, 0));
+		Weapon nunchucks = new Weapon("Nunchucks", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d4", 2));
+		nunchucks.AddAttack(new Attack("Swing", nunchucks.roll, 0, 1));
+		nunchucks.AddAttack(new Attack("Strike", nunchucks.roll, 1, 0));
 		weapons[weaponLevel].Add(nunchucks.name, nunchucks);
 
 		/// Ranged
-
-		Weapon pistol = new Weapon("Pistol", Weapon.Type.Ranged, 0, 0, 0, weaponLevel);
-		pistol.AddAttack(new Attack("Fire", new Roll("d8",1), 0, 0));
-		pistol.AddAttack(new Attack("Sideways Cocked", new Roll("d8",1), 1, -1));
+		Weapon pistol = new Weapon("Pistol", Weapon.Type.Ranged, 0, 0, 0, weaponLevel, new Roll("d8",1));
+		pistol.AddAttack(new Attack("Fire", pistol.roll, 0, 0));
+		pistol.AddAttack(new Attack("Sideways Cocked", pistol.roll, 1, -1));
 		weapons[weaponLevel].Add(pistol.name, pistol);
 
-		Weapon crossbow = new Weapon("Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel);
-		crossbow.AddAttack(new Attack("Fire", new Roll("d6",2)));
+		Weapon crossbow = new Weapon("Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel, new Roll("d6",2));
+		crossbow.AddAttack(new Attack("Fire", crossbow.roll));
 		weapons[weaponLevel].Add(crossbow.name, crossbow);
 
-		Weapon throwingStars = new Weapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel);
-		throwingStars.AddAttack(new Attack("Fling", new Roll("d4",3)));
+		Weapon throwingStars = new Weapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel, new Roll("d4",3));
+		throwingStars.AddAttack(new Attack("Fling", throwingStars.roll));
 		weapons[weaponLevel].Add(throwingStars.name, throwingStars);
 
 		/// Magic
-		Weapon iceCubes = new Weapon("Magic Ice Cubes", Weapon.Type.Magical, 0, -1, -1, weaponLevel);
-		iceCubes.AddAttack(new Attack("Throw Cold", new Roll("d6", 1)));
-		iceCubes.AddAttack(new Attack("Palm to Face", new Roll("d4", 1)));
+		Weapon iceCubes = new Weapon("Magic Ice Cubes", Weapon.Type.Magical, 0, -1, -1, weaponLevel, new Roll("d6", 1));
+		iceCubes.AddAttack(new Attack("Throw Cold", iceCubes.roll));
+		iceCubes.AddAttack(new Attack("Palm to Face", iceCubes.roll, -2, 2));
 		weapons[weaponLevel].Add(iceCubes.name, iceCubes);
 
-		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, -1, weaponLevel);
-		firePaper.AddAttack(new Attack("Flaming Flyer", new Roll("d4", 2)));
-		firePaper.AddAttack(new Attack("Throw Lighter", new Roll("d4", 2), 0, 1));
+		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, -1, weaponLevel, new Roll("d4", 2));
+		firePaper.AddAttack(new Attack("Flaming Flyer", firePaper.roll));
+		firePaper.AddAttack(new Attack("Throw Lighter", firePaper.roll, 0, 1));
 		weapons[weaponLevel].Add(firePaper.name, firePaper);
 
-		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, -1, weaponLevel);
-		metalShards.AddAttack(new Attack("Spare Change", new Roll("d6", 2)));
-		metalShards.AddAttack(new Attack("Coin Roll", new Roll("d8", 1), 1, 0));
+		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, -1, weaponLevel, new Roll("d6", 2));
+		metalShards.AddAttack(new Attack("Spare Change", metalShards.roll));
+		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, 1, 0));
 		weapons[weaponLevel].Add(metalShards.name, metalShards);
 		/////////////
 
@@ -252,13 +251,14 @@ public class GameControllerScript : MonoBehaviour {
 	/// </summary>
 	public enum GameState
 	{
+		NoState,
 		Title,
 		Register,
 		Login,
-		CharacterSelection,
+		WeaponSelection,
 		PlayerProfile,
 		BattleMode,
-		BattleOver
+		BattleOver,
 	}
 
 
@@ -307,21 +307,23 @@ public class GameControllerScript : MonoBehaviour {
 
 		public string name {get;set;}
 		public Type type {get;set;}
-		public int dmgModifier {get;set;}
+		public int damageModifier {get;set;}
 		public int speedModifier {get;set;}
 		public int defenseModifier {get;set;}
 		public int level {get;set;}
+		public Roll roll {get;set;}
 
 		public Dictionary<string,Attack> attacks {get;set;}
 
-		public Weapon(string theName, Type theType, int dmgMod, int spdMod, int defMod, int weaponLevel)
+		public Weapon(string theName, Type theType, int dmgMod, int spdMod, int defMod, int weaponLevel, Roll weaponRoll)
 		{
 			name = theName;				// A human-readable name to be displayed in the UI
 			type = theType;				// See Weapon.Type
-			dmgModifier = dmgMod;		// Additional modifiers that the weapon adds to the damage-roll
+			damageModifier = dmgMod;		// Additional modifiers that the weapon adds to the damage-roll
 			speedModifier = spdMod;		// A modifier effecting the weilder's speed
 			defenseModifier = defMod;	// A modifier effecting the weilder's defense
 			level = weaponLevel;
+			roll = weaponRoll;
 
 			attacks = new Dictionary<string, Attack>();
 		}
@@ -367,8 +369,7 @@ public class GameControllerScript : MonoBehaviour {
 	/// Attack.
 	/// </summary>
 	public class Attack : BattleAction
-	{			
-		public Weapon weapon {get;set;}
+	{
 		public int damageModifier {get;set;}
 
 		public Attack(string theName, Roll theRoll,

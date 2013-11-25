@@ -194,6 +194,21 @@ public class UtilitiesScript : MonoBehaviour {
 	{
 		GUIController().PlayerIsVictorious(exp, change, kills);
 	}
+	public void EnemyIsVictorious()
+	{
+		GUIController().EnemyIsVictorious();
+	}
+
+	public void TransitionBattleWindowsOn()
+	{
+		GUIController().TransitionBattleWindowsOn();
+	}
+
+	public void TransitionBattleWindowsOff()
+	{
+		GUIController().TransitionBattleWindowsOff();
+	}
+
 
 	// -- GUI
 
@@ -218,9 +233,9 @@ public class UtilitiesScript : MonoBehaviour {
 		return scoreoidInterface;
 	}
 
-	public void Register(string playerName, string password)
+	public void Register(string playerName, string password, string email)
 	{
-		ScoreKeeper().CreatePlayer(playerName, password);
+		ScoreKeeper().CreatePlayer(playerName, password, email);
 	}
 	public void Login(string playerName, string password)
 	{

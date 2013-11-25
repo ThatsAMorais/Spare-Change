@@ -37,13 +37,13 @@ public class ScoreoidInterface : MonoBehaviour {
 
 	// -- Requests
 
-	public void CreatePlayer(string playerName, string password)
+	public void CreatePlayer(string playerName, string password, string email)
 	{
 		WWWForm form = StartScoreoidForm();
 
-		// Add additional fields
         form.AddField( "username", playerName );
 		form.AddField( "password", password );
+		form.AddField( "email", email );
 		form.AddField( "money", 0 );
 		form.AddField( "kills", 0 );
 		form.AddField( "time_played", 0 );
@@ -59,7 +59,6 @@ public class ScoreoidInterface : MonoBehaviour {
 	{
 		WWWForm form = StartScoreoidForm();
 
-		// Add additional fields
         form.AddField( "username", playerName );
 		form.AddField( "password", password );
 
@@ -71,7 +70,6 @@ public class ScoreoidInterface : MonoBehaviour {
 	{
 		WWWForm form = StartScoreoidForm();
 
-		// Add additional fields
         form.AddField( "username", playerName );
 		form.AddField( "money", money.ToString());
 		form.AddField( "xp", xp.ToString());
@@ -83,6 +81,15 @@ public class ScoreoidInterface : MonoBehaviour {
 		SendScoreoidForm("editPlayer", form);
 	}
 
+	public void RetrievePassword(string playerName)
+	{
+		WWWForm form = StartScoreoidForm();
+
+		form.AddField("username", playerName);
+		form.AddField("field", "password");
+
+		SendScoreoidForm("getPlayerField", form);
+	}
 
 	// -- Utils
 

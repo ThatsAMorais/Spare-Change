@@ -113,10 +113,7 @@ public class CamControl : MonoBehaviour {
 	{
 		int camCount = 0;
 		
-		//if(true == bHasLookTarget || null == camerasAndTargets)
-		{
-			ResetCamera();
-		}
+		ResetCamera();
 		
 		foreach(GameObject die in dice)
 		{

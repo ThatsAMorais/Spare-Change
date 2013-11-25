@@ -38,7 +38,12 @@ public class RollValueDeciderScript : MonoBehaviour {
 	{
 		bReported = false;
 	}
-	
+
+	void OnCollision()
+	{
+		audio.Play();
+	}
+
 	void OnEnable ()
 	{
 		bReported = false;

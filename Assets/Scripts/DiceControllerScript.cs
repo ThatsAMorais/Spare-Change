@@ -15,14 +15,13 @@ public class DiceControllerScript : MonoBehaviour {
 	public GameObject d20;
 	public GameObject d100;
 	public List<Material> DiceMats;
+	public AudioSource DiceRoll;
 
 	List<GameObject> dice;
 	int dieCount = 0;
 
+	GameObject diceParent;
 
-	/// <summary>
-	/// Roll.
-	/// </summary>
 	public class Roll
 	{
 		public string dieName {get;set;}
@@ -45,20 +44,17 @@ public class DiceControllerScript : MonoBehaviour {
 			}
 		}
 
+		if(null == diceParent)
+		{
+			diceParent = new GameObject();
+			diceParent.name = "Rolled Dice";
+		}
+
 		dice = new List<GameObject>();
 
 		Utilities().ResetCamera();
 	}
 
-	/// <summary>
-	/// Throws the dice.
-	/// </summary>
-	/// <param name='roll'>
-	/// Roll.
-	/// </param>
-	/// <param name='diceBox'>
-	/// Dice box.
-	/// </param>
 	public void ThrowDice(Roll roll, bool bLookAt=true)
 	{
 		//TODO: Many a magic number in this function
@@ -69,6 +65,7 @@ public class DiceControllerScript : MonoBehaviour {
 		for(int d=0; d < roll.count; d++)
 		{
 			GameObject die = CreateDie(roll.dieName);
+			die.transform.parent = diceParent.transform;
 			Vector3 direction = Vector3.one;
 			Vector3 sideways = Vector3.one;
 
