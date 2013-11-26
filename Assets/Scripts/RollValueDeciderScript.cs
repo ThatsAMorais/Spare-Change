@@ -39,9 +39,10 @@ public class RollValueDeciderScript : MonoBehaviour {
 		bReported = false;
 	}
 
-	void OnCollision()
+	void OnCollisionEnter(Collision c)
 	{
-		audio.Play();
+		if(LayerMask.NameToLayer("Mat") == c.gameObject.layer && !audio.isPlaying)
+			audio.PlayOneShot(audio.clip);
 	}
 
 	void OnEnable ()

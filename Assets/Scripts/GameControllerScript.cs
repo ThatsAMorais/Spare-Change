@@ -71,17 +71,17 @@ public class GameControllerScript : MonoBehaviour {
 		weapons[weaponLevel].Add(throwingStars.name, throwingStars);
 
 		/// Magic
-		Weapon iceCubes = new Weapon("Magic Ice Cubes", Weapon.Type.Magical, 0, -1, -1, weaponLevel, new Roll("d6", 1));
+		Weapon iceCubes = new Weapon("Magic Ice Cubes", Weapon.Type.Magical, 0, -1, 1, weaponLevel, new Roll("d6", 1));
 		iceCubes.AddAttack(new Attack("Throw Cold", iceCubes.roll));
 		iceCubes.AddAttack(new Attack("Palm to Face", iceCubes.roll, -2, 2));
 		weapons[weaponLevel].Add(iceCubes.name, iceCubes);
 
-		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, -1, weaponLevel, new Roll("d4", 2));
+		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d4", 2));
 		firePaper.AddAttack(new Attack("Flaming Flyer", firePaper.roll));
 		firePaper.AddAttack(new Attack("Throw Lighter", firePaper.roll, 0, 1));
 		weapons[weaponLevel].Add(firePaper.name, firePaper);
 
-		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, -1, weaponLevel, new Roll("d6", 2));
+		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d6", 2));
 		metalShards.AddAttack(new Attack("Spare Change", metalShards.roll));
 		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, 1, 0));
 		weapons[weaponLevel].Add(metalShards.name, metalShards);
@@ -202,7 +202,10 @@ public class GameControllerScript : MonoBehaviour {
 
 		currentCharacter = player;
 
-		Utilities().setGameState(GameState.PlayerProfile);
+		if(null == player.weapon)
+			Utilities().setGameState(GameState.WeaponSelection);
+		else
+			Utilities().setGameState(GameState.PlayerProfile);
 	}
 
 	public List<Weapon> getWeaponTypes(int level)
@@ -219,14 +222,17 @@ public class GameControllerScript : MonoBehaviour {
 		///  with these dictionaries.  So, since there are already
 		///  users with the weapons stored as "bat" and it is now
 		///  called "Bat", they will encounter bad results
-		if(char.IsLower(weaponName[0]))
-			weaponName = char.ToUpper(weaponName[0]) + weaponName.Substring(1);
-
-		foreach(Dictionary<string, Weapon> weaponLevel in weapons.Values)
+		if(null != weaponName && !weaponName.Equals(""))
 		{
-			if(true == weaponLevel.ContainsKey(weaponName))
+			if(char.IsLower(weaponName[0]))
+				weaponName = char.ToUpper(weaponName[0]) + weaponName.Substring(1);
+
+			foreach(Dictionary<string, Weapon> weaponLevel in weapons.Values)
 			{
-				return weaponLevel[weaponName];
+				if(true == weaponLevel.ContainsKey(weaponName))
+				{
+					return weaponLevel[weaponName];
+				}
 			}
 		}
 

@@ -153,6 +153,8 @@ public class GUIControllerScript : MonoBehaviour {
 		battleWindowRects = new Dictionary<string, Rect>();
 		offScreenRects = new Dictionary<Direction, Rect>();
 
+		currentGUIColor = GUI.color;
+
 		// Throw some dice out for fun
 		Utilities().ThrowDice(new Roll("d4", 5), false);
 		Utilities().ThrowDice(new Roll("d6", 5), false);
@@ -177,19 +179,21 @@ public class GUIControllerScript : MonoBehaviour {
 		windowRects["BattleOver"] 		= new Rect(gameMenuRect);
 
 		battleWindowRects["BattleQueueOn"] 		= new Rect(Screen.width - Screen.width*0.35f, 5f, Screen.width*0.35f, Screen.height*0.3f);
-		battleWindowRects["BattleTextOn"] 		= new Rect(Screen.width*0.55f, Screen.height*0.55f, Screen.width*0.45f, Screen.height*0.45f);
+		battleWindowRects["BattleTextOn"] 		= new Rect(Screen.width*0.45f, 5f, Screen.width - Screen.width*0.45f, Screen.height*0.45f);
 		battleWindowRects["ActionSelectionOn"]	= new Rect(Screen.width*0.008f, Screen.height*0.55f, Screen.width*0.55f, Screen.height*0.45f);
-		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width*0.008f, 5f, Screen.width*0.25f, Screen.height*0.55f);
+		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width - Screen.width*0.35f, Screen.height - Screen.height*0.6f,
+		                                               		Screen.width*0.35f, Screen.height*0.6f);
 
 		battleWindowRects["BattleQueueOff"] 	= new Rect(Screen.width, -Screen.height*0.2f, Screen.width*0.25f, Screen.height*0.2f);
-		battleWindowRects["BattleTextOff"] 		= new Rect(Screen.width*0.55f, Screen.height, Screen.width*0.45f, Screen.height*0.45f);
+		battleWindowRects["BattleTextOff"] 		= new Rect(Screen.width, -Screen.height*45f, Screen.width*0.45f, Screen.height*0.45f);
 		battleWindowRects["ActionSelectionOff"]	= new Rect(Screen.width*0.008f, Screen.height, Screen.width*0.55f, Screen.height*0.45f);
-		battleWindowRects["BattleStatsOff"]		= new Rect(-Screen.width*0.2f, -Screen.height*0.55f, Screen.width*0.25f, Screen.height*0.55f);
+		battleWindowRects["BattleStatsOff"]		= new Rect(-Screen.width*0.2f, -Screen.height*0.6f, Screen.width*0.25f, Screen.height*0.6f);
 
 		windowRects["ActionSelection"] 	= new Rect(battleWindowRects["ActionSelectionOff"]);
 		windowRects["BattleStats"] 		= new Rect(battleWindowRects["BattleStatsOff"]);
 		windowRects["BattleQueue"] 		= new Rect(battleWindowRects["BattleQueueOff"]);
 		windowRects["BattleText"] 		= new Rect(battleWindowRects["BattleTextOff"]);
+
 
 	}
 	
@@ -229,6 +233,7 @@ public class GUIControllerScript : MonoBehaviour {
 		int windowID = 0;
 		GameState gameState = Utilities().getGameState();
 		GUI.skin = guiSkin;
+		GUI.color = currentGUIColor;
 		
 		if(previousGameState != gameState)
 		{
@@ -490,39 +495,38 @@ public class GUIControllerScript : MonoBehaviour {
 		bTransitioningBattleWindows = true;
 	}
 
+	static float MINIMUM_OPACITY = .2f;
+	Color currentGUIColor;
+
 	void TransitionBattleWindows(bool bOn)
 	{
 		string onOff = "Off";
 		string windowName;
 		float speed = TransitionSpeed * currentAcceleration * Time.deltaTime;
+		float targetOpacity = MINIMUM_OPACITY;
 	
 		if(true == bOn)
 		{
 			onOff = "On";
+			targetOpacity = 100f;
 		}
 
-		/*
-		windowName = "BattleQueue"; 
-		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
-		                                                     speed),
-		                                   Mathf.MoveTowards(windowRects[windowName].y, battleWindowRects[windowName+onOff].y,
-		                  									speed),
-		                                   windowRects[windowName].width, windowRects[windowName].height);
+		currentGUIColor = new Color(GUI.color.r, GUI.color.g, GUI.color.b, Mathf.MoveTowards(GUI.color.a, targetOpacity, 4*Time.deltaTime));
 
+		/*
 		windowName = "BattleStats";
 		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
 		                                                     speed),
 		                                   Mathf.MoveTowards(windowRects[windowName].y, battleWindowRects[windowName+onOff].y,
 		                  									speed),
 		                                   windowRects[windowName].width, windowRects[windowName].height);
-*/
+		*/
 		windowName = "ActionSelection";
 		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
 		                                                     speed),
 		                                   Mathf.MoveTowards(windowRects[windowName].y, battleWindowRects[windowName+onOff].y,
 		                  									speed),
 		                                   windowRects[windowName].width, windowRects[windowName].height);
-
 		/*
 		windowName = "BattleText";
 		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
@@ -538,7 +542,7 @@ public class GUIControllerScript : MonoBehaviour {
 		bool bBattleTextDone = true; //windowRects["BattleText"].x == battleWindowRects["BattleText"+onOff].x;
 
 		// Check to see if each window is in its proper place
-		if(bActionSelectionDone && bBattleQueueDone && bBattleStatsDone && bBattleTextDone)
+		if(bActionSelectionDone && bBattleQueueDone && bBattleStatsDone && bBattleTextDone && currentGUIColor.a == targetOpacity)
 		{
 			bTransitioningBattleWindows = false;
 			currentAcceleration = 0;
@@ -631,7 +635,9 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.Box(string.Format("{0}", bRegisteringNew ? "Register New" : "Load"), "SubTitleBox");
 
-		GUILayout.Label("Character Name");
+		GUILayout.FlexibleSpace();
+
+		GUILayout.Label("Character Name", "LegendaryText");
 		characterNameInput = GUILayout.TextField(characterNameInput);
 		if (Event.current.Equals(Event.KeyboardEvent("return")))
 		{
@@ -640,7 +646,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 		if(bRegisteringNew)
 		{
-			GUILayout.Label("E-Mail (Optional: For Password Retrieval)");
+			GUILayout.Label("E-Mail (Optional: For Password Retrieval)", "LegendaryText");
 			emailInput = GUILayout.TextField(emailInput);
 			if (Event.current.Equals(Event.KeyboardEvent("return")))
 			{
@@ -648,7 +654,7 @@ public class GUIControllerScript : MonoBehaviour {
 			}
 		}
 
-		GUILayout.Label("Password");
+		GUILayout.Label("Password", "LegendaryText");
 		passwordInput = GUILayout.PasswordField(passwordInput, "*"[0]);
 		if (Event.current.Equals(Event.KeyboardEvent("return")))
 		{
@@ -676,7 +682,7 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndVertical();
 	}
 
-	bool WeaponSelectItem(Weapon weapon)
+	bool WeaponSelectItem(Weapon weapon, bool bSelectable=false)
 	{
 		bool selected = false;
 		string weaponType = "WeaponTypeIcon";
@@ -691,7 +697,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 		dieColor += weapon.roll.dieName;
 
-		GUILayout.BeginVertical();			// Main Panel
+		GUILayout.BeginVertical(GUILayout.Width(150), GUILayout.Height(350));			// Main Panel
 
 		GUILayout.Box(string.Format("{0}", weapon.name), "WeaponName");
 
@@ -703,7 +709,11 @@ public class GUIControllerScript : MonoBehaviour {
 		// Type image
 		GUILayout.Box("", weaponType);
 		// Level number
+		GUILayout.BeginHorizontal();
+		GUILayout.Box("Lvl: ", "LightOutlineText");
 		GUILayout.Box(string.Format("{0}",weapon.level), "WeaponLevel");
+		GUILayout.EndHorizontal();
+
 		// Space to span down to the bottom of this area
 		GUILayout.Box(string.Format("{0}{1}", weapon.roll.count, weapon.roll.dieName), dieColor);
 
@@ -711,9 +721,21 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndVertical();			// Level/Type/Roll
 
 		GUILayout.BeginVertical();
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Box("Dmg: ", "LightOutlineText");
 		GUILayout.Box(string.Format("{0}", weapon.damageModifier), "WeaponModifier");
+		GUILayout.EndHorizontal();
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Box("Spd: ", "LightOutlineText");
 		GUILayout.Box(string.Format("{0}", weapon.speedModifier), "WeaponModifier");
+		GUILayout.EndHorizontal();
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Box("Def: ", "LightOutlineText");
 		GUILayout.Box(string.Format("{0}", weapon.defenseModifier), "WeaponModifier");
+		GUILayout.EndHorizontal();
 		GUILayout.EndVertical();
 
 		GUILayout.EndHorizontal();			// Weapon Description
@@ -725,21 +747,23 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 			GUILayout.BeginHorizontal();
 			GUILayout.Box(attack.name, "WeaponActionTitle");
-			GUILayout.Box(string.Format("{0}", attack.hitModifier), "WeaponModifier");
-			GUILayout.Box(string.Format("{0}", attack.damageModifier), "WeaponModifier");
+			GUILayout.Box(string.Format("Hit:{0}", attack.hitModifier), "WeaponModifier");
+			GUILayout.Box(string.Format("Dmg:{0}", attack.damageModifier), "WeaponModifier");
 			GUILayout.EndHorizontal();
 		}
 
 		GUILayout.FlexibleSpace();
 
-		if(GUILayout.Button("Select", "ShortButton"))
+		if(bSelectable)
 		{
-			selected = true;
+			if(GUILayout.Button("Select", "ShortButton"))
+			{
+				selected = true;
+			}
 		}
-
 		GUILayout.EndVertical();			// Main Panel
 
-		GUI.Box(GUILayoutUtility.GetLastRect(), "", "WeaponItemOutline");
+		GUI.Box(GUILayoutUtility.GetLastRect(), "");
 
 		return selected;
 	}
@@ -762,7 +786,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 		foreach(Weapon weaponType in Utilities().getWeaponTypes(1))
 		{
-			bool selected = WeaponSelectItem(weaponType);
+			bool selected = WeaponSelectItem(weaponType, true);
 			if(selected)
 			{
 				Utilities().UpdatePlayer(newCharacter.name, 0, 0, 0, 1, weaponType.name);
@@ -852,7 +876,10 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.BeginHorizontal();
 		foreach(BattleAction action in Utilities().getCurrentTurnActor().getActions())
 		{
-			if(GUILayout.Button(string.Format("{0}", action.name)))
+			if(GUILayout.Button(string.Format("{0} {1}", action.name,
+			                                  action.hitModifier != 0 ?
+			                                  (action.hitModifier > 0 ? "+"+action.hitModifier.ToString() : action.hitModifier.ToString())
+			                                  : "" )))
 			{
 				Utilities().SelectedAction(action);
 			}
@@ -932,27 +959,18 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 	}
 
-	void GUI_BattleMode_BattleQueue(int windowID)
+	void GUI_BattleMode_BattleQueue()
 	{
-		AddSpikes(windowRects["BattleQueue"].width);
-
 		GUILayout.BeginHorizontal();
 
-		BattleRound currentTurn = Utilities().getCurrentTurn();
 		Queue<BattleRound> queue = Utilities().getBattleQueue();
-
-		if(null != currentTurn)
-		{
-			string name = Utilities().getCurrentTurnActor().name;
-			GUILayout.Box("", "QueueMemberCurrentTurn");
-			GUI.Box(GUILayoutUtility.GetLastRect(), string.Format("{0}{1}", name[0], name[1]), "QueueMemberOverlay");
-		}
 
 		if(null != queue)
 		{
 			foreach(BattleRound round in queue)
 			{
-				GUILayout.Box("", (round.bIsPlayer) ? "QueueMemberPlayer" : "QueueMemberEnemy");
+				//GUILayout.Box("", (round.bIsPlayer) ? "QueueMember" : "QueueMemberEnemy");
+				GUILayout.Box("", "QueueMember");
 				GUI.Box(GUILayoutUtility.GetLastRect(), string.Format("{0}{1}", round.actor.name[0], round.actor.name[1]), "QueueMemberOverlay");
 			}
 		}
@@ -960,63 +978,56 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 	}
 
-	float GUI_BattleMode_BattleStat(BattleActor actor)
+	void GUI_BattleMode_BattleStat(BattleActor actor)
 	{
-		float windowHeight = 0;
-
-		GUILayout.Label(string.Format("{0}", actor.name), "LifeMeterName");
-		windowHeight += GUILayoutUtility.GetLastRect().height;
+		BattleRound currentTurn = Utilities().getCurrentTurn();
 
 		GUILayout.BeginHorizontal();
-		GUILayout.Box("", "LifeMeter");
+
+		if((null != currentTurn) && (actor == currentTurn.actor))
+			GUILayout.Box("","QueueCurrentTurnIcon");
+		else
+			GUILayout.Space(24);
+
+		GUILayout.BeginVertical();
+
+		GUILayout.Label(string.Format("{0}", actor.name), "LifeMeterName");										// Actor name
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Box("", "LifeMeter");																			// Life-meter ribbon
 
 		Rect tempRect = GUILayoutUtility.GetLastRect();
 		
-		GUI.Label(tempRect, string.Format("{0}", actor.remainingHealth), "LifeMeterAmount");
-		windowHeight += GUILayoutUtility.GetLastRect().height;
-
+		GUI.Label(tempRect, string.Format("{0}", actor.remainingHealth), "LifeMeterAmount");					// Life amount
 
 		float space = 100f * (((actor.health - actor.remainingHealth) * 1.0f)/actor.health)*tempRect.width;
-		GUILayout.Space(space);
-
-		windowHeight += GUILayoutUtility.GetLastRect().height;
-
+		GUILayout.Space(space);																					// Space repr Health Lost
 		GUILayout.EndHorizontal();
 
+		GUILayout.EndVertical();
 
-		return windowHeight;
+		GUILayout.EndHorizontal();
 	}
 
 	void GUI_BattleMode_BattleStats(int windowID)
 	{
-		float windowHeight = 200;
-
 		AddSpikes(windowRects["BattleStats"].width);
 
-		windowHeight += GUI_BattleMode_BattleStat(Utilities().getCurrentCharacter());
-
-		GUILayout.Space(30);
-		windowHeight += 30;
-
 		GUILayout.BeginVertical();
+		
+		GUI_BattleMode_BattleStat(Utilities().getCurrentCharacter());
+
 		foreach(BattleActor enemy in Utilities().getBattleEnemies())
 		{
-			GUILayout.Space(10);
-			windowHeight += 10;
-			windowHeight += GUI_BattleMode_BattleStat(enemy);
+			GUILayout.Space(15);
+			GUI_BattleMode_BattleStat(enemy);
 		}
 
-		GUILayout.Space(20);
-		windowHeight += 20;
+		GUILayout.Space(15);
 
-		GUILayout.FlexibleSpace();
+		GUI_BattleMode_BattleQueue();
 
 		GUILayout.EndVertical();
-
-		/* //TODO: Didn't quite figure this out.
-		windowRects["BattleStats"] = new Rect(windowRects["BattleStats"].x, windowRects["BattleStats"].y,
-		                                      windowRects["BattleStats"].width, windowHeight);
-		*/
 	}
 
 	void GUI_BattleMode_actionSelection(int windowID)
@@ -1069,17 +1080,9 @@ public class GUIControllerScript : MonoBehaviour {
 	{
 		if(true == bDoBattleWindow)
 		{
-			/*
-			// Test button TODO Remove
-			if(GUI.Button(new Rect(Screen.width*0.35f, Screen.height*0.4f, Screen.width*0.2f, Screen.height*0.15f), "End Battle"))
-			{
-				Utilities().BattleOverTest(false);
-			}
-			*/
-
 			windowRects["ActionSelection"] = GUI.Window(windowID++, windowRects["ActionSelection"], GUI_BattleMode_actionSelection, "Actions");
 			windowRects["BattleText"] = GUI.Window(windowID++, windowRects["BattleText"], GUI_BattleMode_BattleText, "");
-			windowRects["BattleQueue"] = GUI.Window(windowID++, windowRects["BattleQueue"], GUI_BattleMode_BattleQueue, "Battle Queue");
+			//windowRects["BattleQueue"] = GUI.Window(windowID++, windowRects["BattleQueue"], GUI_BattleMode_BattleQueue, "Battle Queue");
 			windowRects["BattleStats"] = GUI.Window(windowID++, windowRects["BattleStats"], GUI_BattleMode_BattleStats, "");
 		}
 		return windowID;
@@ -1138,7 +1141,7 @@ public class GUIControllerScript : MonoBehaviour {
 				// Show possible weapon change options, here
 				GUILayout.BeginHorizontal();
 				GUILayout.Space(15);
-				GUILayout.BeginVertical();
+				GUILayout.BeginHorizontal();
 				GUILayout.Label("Change Weapons?");
 
 				foreach(Weapon weapon in randomWeaponChoices)
@@ -1161,10 +1164,10 @@ public class GUIControllerScript : MonoBehaviour {
 					}
 					*/
 
-					WeaponSelectItem(weapon);
+					WeaponSelectItem(weapon, true);
 				}
 
-				GUILayout.EndVertical();
+				GUILayout.EndHorizontal();
 				GUILayout.Space(15);
 				GUILayout.EndHorizontal();
 			}

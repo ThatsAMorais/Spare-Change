@@ -488,6 +488,10 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			DoEnemyTurn();
 		}
+		else 
+		{
+			Utilities().TransitionBattleWindowsOn();
+		}
 	}
 	
 	/// <summary>
@@ -617,41 +621,47 @@ public class BattleControllerScript : MonoBehaviour {
 			//	==> this is the chance-to-hit result.
 			if(!currentTurn.bRolledChanceToHit && die.name.Contains("d20"))
 			{
-				Utilities().TransitionBattleWindowsOn();
-
 				currentTurn.bRolledChanceToHit = true;
 				int actorHitModifier = currentTurn.selectedAction.hitModifier;
 				int targetDefenseModifier = currentTurn.targetedActor.getDefense();
+				int hitValue = rollValue  + actorHitModifier + targetDefenseModifier;
 				// Check if the rolled value was enough to hit the target (factoring in the action's hit modifier)
-				if(rollValue  + actorHitModifier - targetDefenseModifier >= 10)
+				if(hitValue >= 10)
 				{
-					// TODO: Create a "HIT" text
+					// Create a "HIT" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
-					Utilities().SpawnPts("Hit", v.x - 0.15f, v.y, hitTextColor);
 
-					if(0 != currentTurn.selectedAction.hitModifier)
-					{
-						Utilities().SpawnPts("Hit", v.x - 0.2f, v.y + 1, hitTextColor);
-					}
+					v.x -= 0.15f;
+					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
+
+					v.x += 0.5f;
+					v.y += 1;
+					DoBattleModText(actorHitModifier, v, hitTextColor);
+					v.x += 0.5f;
+					v.y += 1;
+					DoBattleModText(targetDefenseModifier, v, damageTextColor);
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} >= 10, Hit!",
-					                             rollValue, actorHitModifier, targetDefenseModifier));
+					Utilities().AppendBattleText(string.Format("Hit! : Roll:{0} + Weapon:{1} + {2}'s Def:{3} = {4} >= 10",
+					                             rollValue, actorHitModifier, currentTurn.targetedActor.name, targetDefenseModifier, hitValue));
+
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
 					currentTurn.bPlayerActed = false;
-					
+
+					// Cue the damage roll
 					StartTimerForThrowDamageRoll();
 				}
 				else
 				{
-					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} < 10, Missed!",
-					                             rollValue, actorHitModifier, targetDefenseModifier));
-
-					// TODO: Create a "Miss" text
+					// Create a "Miss" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+
 					Utilities().SpawnPts("Miss", v.x - 0.15f, v.y, missTextColor);
-					
+
+					Utilities().AppendBattleText(string.Format("Missed! : Roll:{0} + Weapon:{1} - Target-Def:{2} < 10",
+					                                           rollValue, actorHitModifier, targetDefenseModifier));
+
 					// Hit was unsuccessful, end turn
 					FinishTurn();
 				}
@@ -674,8 +684,14 @@ public class BattleControllerScript : MonoBehaviour {
 
 				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-				Utilities().SpawnPts(damageAmount.ToString(), v.x - 0.25f, v.y, damageTextColor);
-
+				v.x -= 0.25f;
+				Utilities().SpawnPts(damageAmount.ToString(), v.x, v.y, damageTextColor);
+				v.x += 0.5f;
+				v.y += 1;
+				DoBattleModText(weaponDamageMod, v, damageTextColor);
+				v.x += 0.5f;
+				v.y += 1;
+				DoBattleModText(attackDamageMod, v, damageTextColor);
 
 				currentTurn.rolledDamage = damageAmount;
 
@@ -687,6 +703,14 @@ public class BattleControllerScript : MonoBehaviour {
 					FinishTurn();
 				}
 			}
+		}
+	}
+
+	void DoBattleModText(int value, Vector2 v, Color color)
+	{
+		if(0 != value)
+		{
+			Utilities().SpawnPts(string.Format("{0}", (value > 0 ? "+"+value.ToString() : value.ToString())), v.x, v.y, color);
 		}
 	}
 		
@@ -703,8 +727,6 @@ public class BattleControllerScript : MonoBehaviour {
 	/// </summary>
 	void FinishTurn()
 	{
-		Utilities().TransitionBattleWindowsOn();
-
 		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
 		{
 			currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
