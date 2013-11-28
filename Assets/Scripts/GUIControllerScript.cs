@@ -20,12 +20,18 @@ public class GUIControllerScript : MonoBehaviour {
 
 	public GUISkin guiSkin;
 	public GUIText BattleTextPrefab;
-
+	public Texture d4Icon;
+	public Texture d6Icon;
+	public Texture d8Icon;
+	public Texture d10Icon;
+	public Texture d12Icon;
+	public Texture d20Icon;
+	public Texture d100Icon;
 	
 	private static float REWARD_TICK_TIMEOUT = 1;
 	
-	private static int TITLE_SCREEN_DICE_MAX = 200;
-	private static float TITLE_SCREEN_DICE_THROW_TIMEOUT = 8;
+	private static int TITLE_SCREEN_DICE_MAX = 15;
+	private static float TITLE_SCREEN_DICE_THROW_TIMEOUT = 15;
 
 	private static int GUI_SCREEN_BORDER = 0;
 	//private static int GUI_TEXTFIELD_PAD = 25;
@@ -105,7 +111,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 	string previousRect;
 	
-	NewCharacter newCharacter;
+	NewCharacter character;
 
 	public class NewCharacter
 	{
@@ -120,6 +126,20 @@ public class GUIControllerScript : MonoBehaviour {
 		Down,
 		Left,
 		Right,
+	}
+
+	Dictionary<string,Texture> diceIcons;
+
+	void Start ()
+	{
+		diceIcons = new Dictionary<string, Texture>();
+		diceIcons.Add("d4",d4Icon);
+		diceIcons.Add("d6",d6Icon);
+		diceIcons.Add("d8",d8Icon);
+		diceIcons.Add("d10",d10Icon);
+		diceIcons.Add("d12",d12Icon);
+		diceIcons.Add("d20",d20Icon);
+		diceIcons.Add("d100",d100Icon);
 	}
 
 	// Use this for initialization
@@ -156,13 +176,13 @@ public class GUIControllerScript : MonoBehaviour {
 		currentGUIColor = GUI.color;
 
 		// Throw some dice out for fun
-		Utilities().ThrowDice(new Roll("d4", 5), false);
-		Utilities().ThrowDice(new Roll("d6", 5), false);
-		Utilities().ThrowDice(new Roll("d8", 5), false);
-		Utilities().ThrowDice(new Roll("d10", 5), false);
-		Utilities().ThrowDice(new Roll("d12", 5), false);
-		Utilities().ThrowDice(new Roll("d20", 5), false);
-		Utilities().ThrowDice(new Roll("d100", 5), false);
+		Utilities().ThrowDice(new Roll("d4", 1), false);
+		Utilities().ThrowDice(new Roll("d6", 1), false);
+		Utilities().ThrowDice(new Roll("d8", 1), false);
+		Utilities().ThrowDice(new Roll("d10", 1), false);
+		Utilities().ThrowDice(new Roll("d12", 1), false);
+		Utilities().ThrowDice(new Roll("d20", 1), false);
+		Utilities().ThrowDice(new Roll("d100", 1), false);
 
 		gameMenuRect		= new Rect(0 + GUI_SCREEN_BORDER, 0 + GUI_SCREEN_BORDER,
 		                         		Screen.width - GUI_SCREEN_BORDER, Screen.height - GUI_SCREEN_BORDER);
@@ -180,9 +200,9 @@ public class GUIControllerScript : MonoBehaviour {
 
 		battleWindowRects["BattleQueueOn"] 		= new Rect(Screen.width - Screen.width*0.35f, 5f, Screen.width*0.35f, Screen.height*0.3f);
 		battleWindowRects["BattleTextOn"] 		= new Rect(Screen.width*0.45f, 5f, Screen.width - Screen.width*0.45f, Screen.height*0.45f);
-		battleWindowRects["ActionSelectionOn"]	= new Rect(Screen.width*0.008f, Screen.height*0.55f, Screen.width*0.55f, Screen.height*0.45f);
-		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width - Screen.width*0.35f, Screen.height - Screen.height*0.6f,
-		                                               		Screen.width*0.35f, Screen.height*0.6f);
+		battleWindowRects["ActionSelectionOn"]	= new Rect(Screen.width*0.008f, Screen.height*0.6f, Screen.width*0.55f, Screen.height*0.4f);
+		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width - Screen.width*0.35f, Screen.height - Screen.height*0.45f,
+		                                               		Screen.width*0.35f, Screen.height*0.45f);
 
 		battleWindowRects["BattleQueueOff"] 	= new Rect(Screen.width, -Screen.height*0.2f, Screen.width*0.25f, Screen.height*0.2f);
 		battleWindowRects["BattleTextOff"] 		= new Rect(Screen.width, -Screen.height*45f, Screen.width*0.45f, Screen.height*0.45f);
@@ -682,6 +702,14 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndVertical();
 	}
 
+	void WeaponItemModifier(string modifierName, int stat, string style="WeaponModifier")
+	{
+		GUILayout.BeginHorizontal();
+		GUILayout.Box(string.Format("{0}", modifierName), "LightOutlineText");
+		GUILayout.Box(string.Format("{0}", stat), style);
+		GUILayout.EndHorizontal();
+	}
+
 	bool WeaponSelectItem(Weapon weapon, bool bSelectable=false)
 	{
 		bool selected = false;
@@ -697,60 +725,56 @@ public class GUIControllerScript : MonoBehaviour {
 
 		dieColor += weapon.roll.dieName;
 
-		GUILayout.BeginVertical(GUILayout.Width(150), GUILayout.Height(350));			// Main Panel
+		GUILayout.BeginVertical(GUILayout.Width(150), GUILayout.Height(320));			// Main Panel
 
 		GUILayout.Box(string.Format("{0}", weapon.name), "WeaponName");
 
 		// Main Weapon Description Area
-		GUILayout.BeginHorizontal();		// Weapon Description
-
+		GUILayout.BeginHorizontal(GUILayout.Width(50), GUILayout.Height(130));		// Weapon Description
+		GUILayout.Space(15);
 		// The Column section containing the Level and Type of the weapon
-		GUILayout.BeginVertical();			// Level/Type/Roll
+
+		GUILayout.BeginVertical();	 // Level/Type/Roll
 		// Type image
 		GUILayout.Box("", weaponType);
-		// Level number
-		GUILayout.BeginHorizontal();
-		GUILayout.Box("Lvl: ", "LightOutlineText");
-		GUILayout.Box(string.Format("{0}",weapon.level), "WeaponLevel");
-		GUILayout.EndHorizontal();
-
-		// Space to span down to the bottom of this area
-		GUILayout.Box(string.Format("{0}{1}", weapon.roll.count, weapon.roll.dieName), dieColor);
-
 		GUILayout.FlexibleSpace();
+		// Level number
+		WeaponItemModifier("Lvl: ", weapon.level, "WeaponLevel");
 		GUILayout.EndVertical();			// Level/Type/Roll
 
 		GUILayout.BeginVertical();
+		// Type image
+		GUILayout.Box(diceIcons[weapon.roll.dieName]);
+		// Space to span down to the bottom of this area
+		GUILayout.Box(string.Format("{0}{1}", weapon.roll.count, weapon.roll.dieName), dieColor);
+		GUILayout.EndVertical();
 
-		GUILayout.BeginHorizontal();
-		GUILayout.Box("Dmg: ", "LightOutlineText");
-		GUILayout.Box(string.Format("{0}", weapon.damageModifier), "WeaponModifier");
-		GUILayout.EndHorizontal();
-
-		GUILayout.BeginHorizontal();
-		GUILayout.Box("Spd: ", "LightOutlineText");
-		GUILayout.Box(string.Format("{0}", weapon.speedModifier), "WeaponModifier");
-		GUILayout.EndHorizontal();
-
-		GUILayout.BeginHorizontal();
-		GUILayout.Box("Def: ", "LightOutlineText");
-		GUILayout.Box(string.Format("{0}", weapon.defenseModifier), "WeaponModifier");
-		GUILayout.EndHorizontal();
+		GUILayout.BeginVertical();
+		WeaponItemModifier("Dmg: ", weapon.damageModifier);
+		WeaponItemModifier("Spd: ", weapon.speedModifier);
+		WeaponItemModifier("Def: ", weapon.defenseModifier);
 		GUILayout.EndVertical();
 
 		GUILayout.EndHorizontal();			// Weapon Description
 
 		GUILayout.Box("", "Divider");
 
+		int attackCount = 0;
 		GUILayout.Box("Actions", "WeaponActionTitle");
 		foreach(Attack attack in weapon.attacks.Values)
 		{
+			attackCount++;
 			GUILayout.BeginHorizontal();
-			GUILayout.Box(attack.name, "WeaponActionTitle");
-			GUILayout.Box(string.Format("Hit:{0}", attack.hitModifier), "WeaponModifier");
-			GUILayout.Box(string.Format("Dmg:{0}", attack.damageModifier), "WeaponModifier");
+			GUILayout.Box(attack.name, "WeaponActionName", GUILayout.Width(80));
+
+			WeaponItemModifier("Hit: ", attack.hitModifier);
+			WeaponItemModifier("Dmg: ", attack.damageModifier);
+			GUILayout.FlexibleSpace();
 			GUILayout.EndHorizontal();
 		}
+
+		if(2 > attackCount)
+			GUILayout.Space(25);
 
 		GUILayout.FlexibleSpace();
 
@@ -768,6 +792,8 @@ public class GUIControllerScript : MonoBehaviour {
 		return selected;
 	}
 
+	Vector2 weaponSelectScrollview = Vector2.zero;
+
 	void GUI_WeaponSelection(int windowID)
 	{
 		GUI.FocusWindow(windowID);
@@ -778,38 +804,24 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.FlexibleSpace();
 
+		weaponSelectScrollview = GUILayout.BeginScrollView(weaponSelectScrollview);
 		GUILayout.BeginHorizontal();
-
-		GUILayout.FlexibleSpace();
-
-		GUILayout.BeginVertical();
-
 		foreach(Weapon weaponType in Utilities().getWeaponTypes(1))
 		{
 			bool selected = WeaponSelectItem(weaponType, true);
 			if(selected)
 			{
-				Utilities().UpdatePlayer(newCharacter.name, 0, 0, 0, 1, weaponType.name);
+				Utilities().UpdatePlayer(character.name, 0, 0, 0, 1, weaponType.name);
 			}
 
-			GUILayout.Space(20);
+			GUILayout.Space(10);
 
 			weaponCount++;
 
-			if(2 == weaponCount)
-			{
-				weaponCount = 0;
-				GUILayout.EndVertical();
-				GUILayout.BeginVertical();
-			}
-
 		}
-		GUILayout.EndVertical();
-
-		GUILayout.FlexibleSpace();
-
 		GUILayout.EndHorizontal();
-
+		GUILayout.EndScrollView();
+	
 		GUILayout.FlexibleSpace();
 	}
 
@@ -1102,6 +1114,7 @@ public class GUIControllerScript : MonoBehaviour {
 		return randomSelection;
 	}
 
+	Vector2 changeWeaponScroll = Vector3.zero;
 	void GUI_BattleOver(int windowID)
 	{
 		Character playerCharacter = Utilities().getCurrentCharacter();
@@ -1144,28 +1157,12 @@ public class GUIControllerScript : MonoBehaviour {
 				GUILayout.BeginHorizontal();
 				GUILayout.Label("Change Weapons?");
 
+				changeWeaponScroll = GUILayout.BeginScrollView(changeWeaponScroll);
 				foreach(Weapon weapon in randomWeaponChoices)
 				{
-					/*
-					if(GUILayout.Button(string.Format("{0} : Cost({1})", weapon.name, 3*weapon.level)))
-					{
-						bChangedWeapon = true;
-
-						randomWeaponChoices = new List<Weapon>(); // Clear the weapon choices
-
-						playerCharacter.changeWeapon(weapon);
-
-						Utilities().UpdatePlayer(playerCharacter.name,
-						                         playerCharacter.change,
-						                         playerCharacter.xp,
-						                         playerCharacter.kills,
-						                         playerCharacter.level,
-						                         playerCharacter.weapon.name);
-					}
-					*/
-
 					WeaponSelectItem(weapon, true);
 				}
+				GUILayout.EndScrollView();
 
 				GUILayout.EndHorizontal();
 				GUILayout.Space(15);
@@ -1300,6 +1297,15 @@ public class GUIControllerScript : MonoBehaviour {
 
 	public void PlayerLoggedIn(ScoreoidPlayer player)
 	{
+		/**HACK: The only reason this is stored in this case is to support if a player registers, does not select a weapon,
+		 	logs in later, and is brought to the weaponselect screen.  The weaponselection screen is designed to read a new-
+		 	character object so we fill this out just in case.  ***/
+		// Start a new character object
+		character = new NewCharacter();	//TODO: Since this is global, should be forcefully dereferenced
+		// Store these details between this step and the weapon selection phase
+		character.name = player.playerName;
+		character.password = passwordInput;
+
 		Utilities().setCurrentCharacter(player);
 	}
 
@@ -1307,11 +1313,11 @@ public class GUIControllerScript : MonoBehaviour {
 	public void PlayerRegistered()
 	{
 		// Start a new character object
-		newCharacter = new NewCharacter();
+		character = new NewCharacter();
 
 		// Store these details between this step and the character selection phase
-		newCharacter.name = characterNameInput;
-		newCharacter.password = passwordInput;
+		character.name = characterNameInput;
+		character.password = passwordInput;
 
 		// Start the character selection
 		Utilities().setGameState(GameState.WeaponSelection);
@@ -1327,7 +1333,7 @@ public class GUIControllerScript : MonoBehaviour {
 			// Now that the player is created and the character class has been selected,
 			//	login as this user which will tap into the normal Login logic as the
 			//	player is retrieved from the server. (Step 4)
-			Utilities().Login(newCharacter.name, newCharacter.password);
+			Utilities().Login(character.name, character.password);
 		}
 		else if(GameState.BattleOver == gameState)
 		{
@@ -1350,7 +1356,7 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 			diceThrowTimer = 0;
 
-			Utilities().ThrowDice(new Roll(currentDie, Random.Range(1,4)), false);
+			Utilities().ThrowDice(new Roll(currentDie, Random.Range(1,2)), false);
 
 			switch(currentDie)
 			{

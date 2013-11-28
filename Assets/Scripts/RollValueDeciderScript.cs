@@ -42,7 +42,11 @@ public class RollValueDeciderScript : MonoBehaviour {
 	void OnCollisionEnter(Collision c)
 	{
 		if(LayerMask.NameToLayer("Mat") == c.gameObject.layer && !audio.isPlaying)
-			audio.PlayOneShot(audio.clip);
+		{
+			int randomSound = Random.Range(0,3);
+			AudioSource audioSource = GetComponents<AudioSource>()[randomSound];
+			audioSource.PlayOneShot(audioSource.clip);
+		}
 	}
 
 	void OnEnable ()

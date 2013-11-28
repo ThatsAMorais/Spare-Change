@@ -12,6 +12,7 @@ public class GameControllerScript : MonoBehaviour {
 
 	GameState gameState;
 	Player currentCharacter;
+	ScoreoidPlayer mostRecentPlayer;
 
 					// level 		// Weapon-Type 		// Weapon-Name
 	public Dictionary<int,Dictionary<string,Weapon>> weapons;
@@ -188,11 +189,16 @@ public class GameControllerScript : MonoBehaviour {
 
 	public Player getCurrentCharacter()
 	{
+		// Hack to attempt to retain the player after code swaps during development
+		if(null == currentCharacter)
+			setCurrentCharacter(mostRecentPlayer);
+
 		return currentCharacter;
 	}
 
 	public void setCurrentCharacter(ScoreoidPlayer scoreoidPlayer)
 	{
+		mostRecentPlayer = scoreoidPlayer;
 		Player player = new Player(scoreoidPlayer.playerName,
 									getWeapon(scoreoidPlayer.weapon),
 									scoreoidPlayer.xp,

@@ -634,10 +634,10 @@ public class BattleControllerScript : MonoBehaviour {
 					v.x -= 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
 
-					v.x += 0.5f;
+					v.x -= 0.5f;
 					v.y += 1;
 					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x += 0.5f;
+					v.x -= 0.5f;
 					v.y += 1;
 					DoBattleModText(targetDefenseModifier, v, damageTextColor);
 					
@@ -686,10 +686,10 @@ public class BattleControllerScript : MonoBehaviour {
 
 				v.x -= 0.25f;
 				Utilities().SpawnPts(damageAmount.ToString(), v.x, v.y, damageTextColor);
-				v.x += 0.5f;
+				v.x -= 0.5f;
 				v.y += 1;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
-				v.x += 0.5f;
+				v.x -= 0.5f;
 				v.y += 1;
 				DoBattleModText(attackDamageMod, v, damageTextColor);
 
