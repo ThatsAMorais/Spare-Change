@@ -361,7 +361,8 @@ public class BattleControllerScript : MonoBehaviour {
 		{
 			List<EnemyDefinition> possibleEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
 
-			/* Easy-fight test code
+			/*
+			// Easy-fight test code
 			List<EnemyDefinition> possibleEnemies = new List<EnemyDefinition>();
 			List<EnemyDefinition> allEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
 
@@ -615,7 +616,7 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		bThrowDamageRoll = true;
 	}
-	
+
 	/// <summary>
 	/// Dices the rolled.
 	/// </summary>
@@ -659,15 +660,15 @@ public class BattleControllerScript : MonoBehaviour {
 					v.x -= 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
 
-					v.x -= 0.5f;
+					v.x += 0.5f;
 					v.y += 1;
 					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x -= 0.5f;
+					v.x -= 1f;
 					v.y += 1;
 					DoBattleModText(targetDefenseModifier, v, damageTextColor);
 					
 					// Describe the miss
-					Utilities().AppendBattleText(string.Format("Hit! : Roll:{0} + Weapon:{1} + {2}'s Def:{3} = {4} >= 10",
+					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} + {2}'s Def:{3} = {4} ==> Hit!",
 					                             rollValue, actorHitModifier, currentTurn.targetedActor.name, targetDefenseModifier, hitValue));
 
 					// Hit was successful, roll for damage
@@ -684,7 +685,7 @@ public class BattleControllerScript : MonoBehaviour {
 
 					Utilities().SpawnPts("Miss", v.x - 0.15f, v.y, missTextColor);
 
-					Utilities().AppendBattleText(string.Format("Missed! : Roll:{0} + Weapon:{1} - Target-Def:{2} < 10",
+					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} ==> Missed!",
 					                                           rollValue, actorHitModifier, targetDefenseModifier));
 
 					// Hit was unsuccessful, end turn
@@ -701,27 +702,27 @@ public class BattleControllerScript : MonoBehaviour {
 
 				damageAmount += weaponDamageMod;
 				if(0 < weaponDamageMod)
-					string.Concat(string.Format("weapon-modifier:{0}", weaponDamageMod));
+					battleTextstring += string.Concat(string.Format(" weapon-modifier:{0}", weaponDamageMod));
 
 				damageAmount += attackDamageMod;
 				if(0 < attackDamageMod)
-					string.Concat(string.Format("attack-modifier:{0}", attackDamageMod));
+					battleTextstring += string.Concat(string.Format(" attack-modifier:{0}", attackDamageMod));
 
 				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
 				v.x -= 0.25f;
 				Utilities().SpawnPts(rollValue.ToString(), v.x, v.y, damageTextColor);
-				v.x -= 0.5f;
+				v.x += 0.5f;
 				v.y += 1;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
-				v.x -= 0.5f;
+				v.x -= 1f;
 				v.y += 1;
 				DoBattleModText(attackDamageMod, v, damageTextColor);
 
 				currentTurn.rolledDamage = Mathf.Max(1,damageAmount);
 
-				Utilities().AppendBattleText(string.Format("{0}, Damage to {1}",
-				                                          	battleTextstring, currentTurn.targetedActor.name));
+				Utilities().AppendBattleText(string.Format("{0} => {1}  dealt to {2}",
+				                                          	battleTextstring, currentTurn.rolledDamage, currentTurn.targetedActor.name));
 
 				if(0 == currentTurn.numberOfDamageDiceStillRolling)
 				{
@@ -821,6 +822,8 @@ public class BattleControllerScript : MonoBehaviour {
 		Utilities().setGameState(GameState.BattleOver);
 
 		Utilities().ClearDice();
+
+		playerCharacter.remainingHealth = playerCharacter.health;
 	}
 
 	// This is just for testing the battle-over screen without going through a battle

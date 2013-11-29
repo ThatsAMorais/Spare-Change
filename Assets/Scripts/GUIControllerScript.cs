@@ -485,6 +485,7 @@ public class GUIControllerScript : MonoBehaviour {
 		case GameState.BattleOver:
 		
 			bFadeWindows = false;
+			bRandomWeaponChoicesSet = false;
 
 			if(false == bTransitioningBattleWindows)
 			{
@@ -509,7 +510,6 @@ public class GUIControllerScript : MonoBehaviour {
 	// TODO: Kinda deprecated, as is obvious if you read this and see that all are left on
 	void GUI_BattleWindows_PlaceOffScreen()
 	{
-		// TODO: Place each window-rect at its respective off-screen location instantly, for transitioning in
 		windowRects["ActionSelection"] = new Rect(battleWindowRects["ActionSelectionOn"]);
 		windowRects["BattleQueue"] = new Rect(battleWindowRects["BattleQueueOn"]);
 		windowRects["BattleText"] = new Rect(battleWindowRects["BattleTextOn"]);
@@ -542,7 +542,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void FadeWindows(bool bOn)
 	{
-		float targetOpacity = 0.90f;
+		float targetOpacity = 0.85f;
 		
 		if(true == bOn)
 		{
@@ -925,7 +925,7 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 		GUILayout.Box(string.Format("Name: {0}\nLevel: {1}\nXP: {2}\nChange: {3}\nKills: {4}",
 		                            player.name, player.level, player.xp, player.change, player.kills),
-		              GUILayout.Width(WEAPON_SELECT_ITEM_WIDTH), GUILayout.Height(WEAPON_SELECT_ITEM_HEIGHT));
+		              GUILayout.MinWidth(400), GUILayout.MinHeight(340));
 		GUILayout.FlexibleSpace();
 		WeaponSelectItem(player.weapon);
 		GUILayout.FlexibleSpace();
@@ -972,6 +972,8 @@ public class GUIControllerScript : MonoBehaviour {
 
 	void GUI_BattleMode_playerSelectAction()
 	{
+		int buttonCount = 0;
+
 		GUILayout.Box("Select an Action", "CurrentAction");
 		////
 		GUILayout.FlexibleSpace();
@@ -984,6 +986,8 @@ public class GUIControllerScript : MonoBehaviour {
 			int dmgModifier = (action as Attack).damageModifier;
 			string dmgModifierText = "";
 
+			buttonCount++;
+
 			if(hitModifier != 0)
 			{
 				hitModifierText = string.Format("(Hit:{0}{1})", (hitModifier > 0) ? "+" : "", hitModifier.ToString());
@@ -994,9 +998,16 @@ public class GUIControllerScript : MonoBehaviour {
 				dmgModifierText = string.Format("(Dmg:{0}{1})", (dmgModifier > 0) ? "+" : "", dmgModifier.ToString());
 			}
 
-			if(GUILayout.Button(string.Format("{0} {1} {2}", action.name, hitModifierText, dmgModifierText)))
+			if(GUILayout.Button(string.Format("{0} {1} {2}", action.name, hitModifierText, dmgModifierText), GUILayout.MaxWidth(300)))
 			{
 				Utilities().SelectedAction(action);
+			}
+			GUILayout.FlexibleSpace();
+			// newline
+			if(buttonCount >= 2)
+			{
+				GUILayout.EndHorizontal();
+				GUILayout.BeginHorizontal();
 			}
 		}
 		GUILayout.EndHorizontal();
@@ -1265,16 +1276,11 @@ public class GUIControllerScript : MonoBehaviour {
 	}
 
 	Vector2 changeWeaponScroll = Vector3.zero;
+	bool bUpdatingWeapon = false;
 
 	void GUI_BattleOver(int windowID)
 	{
 		Character playerCharacter = Utilities().getCurrentCharacter();
-
-		if(false == bRandomWeaponChoicesSet)
-		{
-			randomWeaponChoices = GetRandomWeaponOptions(Utilities().getCurrentCharacter().level, 3);
-			bRandomWeaponChoicesSet = true;
-		}
 
 		AddSpikes(windowRects["BattleOver"].width-80, true);
 
@@ -1300,7 +1306,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.FlexibleSpace();
 
-		if(true == bFinishedRewarding)
+		if(true == bFinishedRewarding && !(bChangedWeapon && bUpdatingWeapon))
 		{
 			GUILayout.BeginHorizontal();
 			
@@ -1325,6 +1331,12 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 			if(false == bChangedWeapon)
 			{
+				if(false == bRandomWeaponChoicesSet)
+				{
+					randomWeaponChoices = GetRandomWeaponOptions(Utilities().getCurrentCharacter().level, 3);
+					bRandomWeaponChoicesSet = true;
+				}
+
 				// Show possible weapon change options, here
 				GUILayout.BeginVertical();
 
@@ -1334,12 +1346,17 @@ public class GUIControllerScript : MonoBehaviour {
 				GUILayout.BeginHorizontal();
 				foreach(Weapon weapon in randomWeaponChoices)
 				{
-					bool selected = WeaponSelectItem(weapon, true);
-					if(selected)
+					if(WeaponSelectItem(weapon, true))
 					{
-						Utilities().UpdatePlayer(playerCharacter.name, 0, 0, 0, 1, weapon.name);
+						responseMessage = "Updating Weapon...";
 						bChangedWeapon = true;
+						bUpdatingWeapon = true;
 						bRandomWeaponChoicesSet = false;
+
+						playerCharacter.weapon = weapon;
+
+						Utilities().UpdatePlayer(playerCharacter.name, playerCharacter.change, playerCharacter.xp,
+						                         playerCharacter.kills, playerCharacter.level, playerCharacter.weapon.name);
 					}
 				}
 				GUILayout.EndHorizontal();
@@ -1348,13 +1365,18 @@ public class GUIControllerScript : MonoBehaviour {
 				GUILayout.Space(15);
 				GUILayout.EndVertical();
 			}
-			else {
+			/*
+			else
+			{
 				GUILayout.FlexibleSpace();
-			}
+			}*/
 		}
-		else {
+		/*
+		else
+		{
 			GUILayout.FlexibleSpace();
 		}
+		*/
 
 		GUILayout.EndHorizontal();
 
@@ -1366,6 +1388,7 @@ public class GUIControllerScript : MonoBehaviour {
 		bPlayerIsVictorious = true;
 		bRewardsAwarded = true;
 		bFinishedRewarding = false;
+		bUpdatingWeapon = false;
 
 		awardedExp = exp;
 		awardedChange = change;
@@ -1377,6 +1400,7 @@ public class GUIControllerScript : MonoBehaviour {
 		bPlayerIsVictorious = false;
 		bRewardsAwarded = true;
 		bFinishedRewarding = true;
+		bUpdatingWeapon = false;
 	}
 
 
@@ -1505,7 +1529,13 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 		else if(GameState.BattleOver == gameState)
 		{
-			responseMessage = "Player Data Saved!";
+			if(bChangedWeapon && bUpdatingWeapon)
+			{
+				bUpdatingWeapon = false;
+				responseMessage = "Weapon Updated!";
+			}
+			else
+				responseMessage = "Player Data Saved!";
 		}
 	}
 
