@@ -27,7 +27,7 @@ public class BattleControllerScript : MonoBehaviour {
 			weapon = actorWeapon;
 			remainingHealth = 1;			// Default
 			speed = 5;						// Default
-			defense = 2;					// Default
+			defense = 0;					// Default
 		}
 
 		public BattleActor(string actorName, Weapon actorWeapon, int actorHealth, int actorSpeed, int actorDefense)
@@ -326,6 +326,9 @@ public class BattleControllerScript : MonoBehaviour {
 
 	public BattleActor getCurrentTurnActor()
 	{
+		if(null == currentTurn)
+			return null;
+
 		return currentTurn.actor;
 	}
 
@@ -344,7 +347,7 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.state = state;
 	}
 
-	void GenerateBattle(bool bBossFight=false, int numberOfEnemies=3)
+	void GenerateBattle(bool bBossFight=false, int numberOfEnemies=2)
 	{
 		List<BattleActor> opponents = new List<BattleActor>();
 		int numberOfEnemiesCreated = 0;
@@ -352,12 +355,22 @@ public class BattleControllerScript : MonoBehaviour {
 		if(true == bBossFight)
 		{
 			List<EnemyDefinition> possibleEnemies = Utilities().getBossPerLevel(playerCharacter.level);
-
 			opponents.Add(new Enemy(possibleEnemies[Random.Range(0, possibleEnemies.Count)]));
 		}
 		else
 		{
 			List<EnemyDefinition> possibleEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
+
+			/* Easy-fight test code
+			List<EnemyDefinition> possibleEnemies = new List<EnemyDefinition>();
+			List<EnemyDefinition> allEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
+
+			foreach(EnemyDefinition enemyDef in allEnemies)
+			{
+				if(enemyDef.name == "Bunny")
+					possibleEnemies.Add(enemyDef);
+			}
+			*/
 
 			while(numberOfEnemies > numberOfEnemiesCreated)
 			{
@@ -471,6 +484,11 @@ public class BattleControllerScript : MonoBehaviour {
 		if(null == queue)
 		{
 			InitializeQueue();
+		}
+
+		if(0 == enemies.Count)
+		{
+			return;
 		}
 
 		BattleRound nextRound = queue.Dequeue();
@@ -611,6 +629,13 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		//TODO: Magic Numbers
 
+		if(Utilities().getGameState() != GameState.BattleMode)
+		{
+			Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+			Utilities().SpawnPts(string.Format("{0}", rollValue), v.x, v.y, hitTextColor);
+			return;
+		}
+
 		// The following logic is only for in the Act state
 		if(null != currentTurn && BattleRound.State.Act == currentTurn.state)
 		{
@@ -685,7 +710,7 @@ public class BattleControllerScript : MonoBehaviour {
 				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
 				v.x -= 0.25f;
-				Utilities().SpawnPts(damageAmount.ToString(), v.x, v.y, damageTextColor);
+				Utilities().SpawnPts(rollValue.ToString(), v.x, v.y, damageTextColor);
 				v.x -= 0.5f;
 				v.y += 1;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
@@ -693,13 +718,14 @@ public class BattleControllerScript : MonoBehaviour {
 				v.y += 1;
 				DoBattleModText(attackDamageMod, v, damageTextColor);
 
-				currentTurn.rolledDamage = damageAmount;
+				currentTurn.rolledDamage = Mathf.Max(1,damageAmount);
 
 				Utilities().AppendBattleText(string.Format("{0}, Damage to {1}",
 				                                          	battleTextstring, currentTurn.targetedActor.name));
 
 				if(0 == currentTurn.numberOfDamageDiceStillRolling)
 				{
+					currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
 					FinishTurn();
 				}
 			}
@@ -726,68 +752,73 @@ public class BattleControllerScript : MonoBehaviour {
 	/// Finishs the turn.
 	/// </summary>
 	void FinishTurn()
-	{
-		if((currentTurn.bRolledChanceToHit) && (currentTurn.bChanceToHitSuccess))
+	{	
+		if(0 >= playerCharacter.remainingHealth)
 		{
-			currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
-			
-			if(0 >= playerCharacter.remainingHealth)
-			{
-				// Gameover man...
-				BattleOver(false);
-			}
-			
-			List<BattleActor> killed = new List<BattleActor>();
-			foreach(Enemy enemy in enemies)
-			{
-				if(0 >= enemy.remainingHealth)
-				{
-					// Add the rewards to the battle totals, to be awarded at the end
-					AccrueRewards(enemy.getChangeValue(), enemy.getExperienceValue(), 1);
-					killed.Add(enemy); // Must delete after this loop or the change in the collection will cause an error
-				}
-			}
-			foreach(Enemy killedEnemy in killed)
-			{
-				enemies.Remove(killedEnemy);
-				List<BattleRound> deletedRounds = new List<BattleRound>();
-				foreach(BattleRound round in queue)
-				{
-					if(killedEnemy == round.actor)
-					{
-						deletedRounds.Add(round);
-					}
-				}
-				List<BattleRound> currentQueue = new List<BattleRound>(queue.ToArray());
-				
-				foreach(BattleRound round in deletedRounds)
-				{
-					currentQueue.Remove(round);
-				}
-				queue = new Queue<BattleRound>(currentQueue);
-			}
-			
-			if(0 == enemies.Count)
-			{
-				BattleOver(true);
-			}
+			// Gameover man...
+			BattleOver(false);
 		}
 		
-		NextTurn();
+		List<BattleActor> killed = new List<BattleActor>();
+		foreach(Enemy enemy in enemies)
+		{
+			if(0 >= enemy.remainingHealth)
+			{
+				// Add the rewards to the battle totals, to be awarded at the end
+				AccrueRewards(enemy.getChangeValue(), enemy.getExperienceValue(), 1);
+				killed.Add(enemy); // Must delete after this loop or the change in the collection will cause an error
+			}
+		}
+		foreach(Enemy killedEnemy in killed)
+		{
+			enemies.Remove(killedEnemy);
+
+			List<BattleRound> deletedRounds = new List<BattleRound>();
+			foreach(BattleRound round in queue)
+			{
+				if(killedEnemy == round.actor)
+				{
+					deletedRounds.Add(round);
+				}
+			}
+			List<BattleRound> currentQueue = new List<BattleRound>(queue.ToArray());
+			
+			foreach(BattleRound round in deletedRounds)
+			{
+				currentQueue.Remove(round);
+			}
+			queue = new Queue<BattleRound>(currentQueue);
+		}
+		
+		if(0 == enemies.Count)
+		{
+			BattleOver(true);
+		}
+		else
+		{
+			NextTurn();
+		}
+		
 	}
 
 	void BattleOver(bool bPlayerIsWinner)
 	{
-		Utilities().setGameState(GameState.BattleOver);
+		string battleOverText;
 
 		if(true == bPlayerIsWinner)
 		{
+			battleOverText = "Battle Won!";
 			Utilities().PlayerIsVictorious(accruedExperience, accruedChange, killsThisBattle);
 		}
 		else
 		{
+			battleOverText = "Battle Lost";
 			Utilities().EnemyIsVictorious();
 		}
+
+		Utilities().AppendBattleText(string.Format("----------------{0}----------------", battleOverText));
+
+		Utilities().setGameState(GameState.BattleOver);
 
 		Utilities().ClearDice();
 	}

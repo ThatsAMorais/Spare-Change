@@ -12,7 +12,6 @@ public class GameControllerScript : MonoBehaviour {
 
 	GameState gameState;
 	Player currentCharacter;
-	ScoreoidPlayer mostRecentPlayer;
 
 					// level 		// Weapon-Type 		// Weapon-Name
 	public Dictionary<int,Dictionary<string,Weapon>> weapons;
@@ -45,30 +44,33 @@ public class GameControllerScript : MonoBehaviour {
 		/// Melee
 		Weapon bat = new Weapon("Bat", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d6",1));
 		bat.AddAttack(new Attack("Swing", bat.roll));
+		bat.AddAttack(new Attack("Chop", bat.roll, 3, -2));
+		bat.AddAttack(new Attack("Prod", bat.roll, -3, 3));
 		weapons[weaponLevel].Add(bat.name, bat);
 
 		Weapon knife = new Weapon("Knife", Weapon.Type.Melee, 1, -1, 0, weaponLevel, new Roll("d4",1));
-		knife.AddAttack(new Attack("Swing", knife.roll));
-		knife.AddAttack(new Attack("Stab", knife.roll));
+		knife.AddAttack(new Attack("Swing", knife.roll, -1, 1));
+		knife.AddAttack(new Attack("Stab", knife.roll, 3, -1));
 		weapons[weaponLevel].Add(knife.name, knife);
 
 		Weapon nunchucks = new Weapon("Nunchucks", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d4", 2));
-		nunchucks.AddAttack(new Attack("Swing", nunchucks.roll, 0, 1));
-		nunchucks.AddAttack(new Attack("Strike", nunchucks.roll, 1, 0));
+		nunchucks.AddAttack(new Attack("Sideward", nunchucks.roll));
+		nunchucks.AddAttack(new Attack("Upward", nunchucks.roll, 3, -2));
 		weapons[weaponLevel].Add(nunchucks.name, nunchucks);
 
 		/// Ranged
 		Weapon pistol = new Weapon("Pistol", Weapon.Type.Ranged, 0, 0, 0, weaponLevel, new Roll("d8",1));
 		pistol.AddAttack(new Attack("Fire", pistol.roll, 0, 0));
-		pistol.AddAttack(new Attack("Sideways Cocked", pistol.roll, 1, -1));
+		pistol.AddAttack(new Attack("Sideways Cocked", pistol.roll, 3, -2));
 		weapons[weaponLevel].Add(pistol.name, pistol);
 
 		Weapon crossbow = new Weapon("Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel, new Roll("d6",2));
-		crossbow.AddAttack(new Attack("Fire", crossbow.roll));
+		crossbow.AddAttack(new Attack("Fire", crossbow.roll, 0, -1));
 		weapons[weaponLevel].Add(crossbow.name, crossbow);
 
-		Weapon throwingStars = new Weapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel, new Roll("d4",3));
+		Weapon throwingStars = new Weapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel, new Roll("d4",2));
 		throwingStars.AddAttack(new Attack("Fling", throwingStars.roll));
+		throwingStars.AddAttack(new Attack("Critical", throwingStars.roll, 5, -3));
 		weapons[weaponLevel].Add(throwingStars.name, throwingStars);
 
 		/// Magic
@@ -79,12 +81,14 @@ public class GameControllerScript : MonoBehaviour {
 
 		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d4", 2));
 		firePaper.AddAttack(new Attack("Flaming Flyer", firePaper.roll));
-		firePaper.AddAttack(new Attack("Throw Lighter", firePaper.roll, 0, 1));
+		firePaper.AddAttack(new Attack("Throw Lighter", firePaper.roll, 6, -4));
+		firePaper.AddAttack(new Attack("Spit Gas", firePaper.roll, -2, 2));
 		weapons[weaponLevel].Add(firePaper.name, firePaper);
 
 		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d6", 2));
 		metalShards.AddAttack(new Attack("Spare Change", metalShards.roll));
-		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, 1, 0));
+		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, -4, 3));
+		metalShards.AddAttack(new Attack("Purse Punch", metalShards.roll, 3, -3));
 		weapons[weaponLevel].Add(metalShards.name, metalShards);
 		/////////////
 
@@ -95,6 +99,11 @@ public class GameControllerScript : MonoBehaviour {
 
 		enemyLevel++;
 		enemies[enemyLevel] = new Dictionary<string, EnemyDefinition>();
+
+		// Easy
+		enemies[enemyLevel].Add(
+			"Bunny",
+			new EnemyDefinition("Bunny", weapons[1]["Knife"], 1, 1, 3, 10, -1, enemyLevel));
 
 		// BatHead //
 		enemies[enemyLevel].Add(
@@ -130,7 +139,7 @@ public class GameControllerScript : MonoBehaviour {
 		// Bossy Hoss //
 		bosses[bossLevel].Add(
 			"Bossy Hoss",
-			new EnemyDefinition("Bossy Hoss", weapons[1]["Magical Metal Shards"], 20, 30, 30, 5, 2, enemyLevel));
+			new EnemyDefinition("Bossy Hoss", weapons[1]["Magical Metal Shards"], 20, 30, 30, 5, -1, enemyLevel));
 		/////////////
 	}
 
@@ -189,16 +198,11 @@ public class GameControllerScript : MonoBehaviour {
 
 	public Player getCurrentCharacter()
 	{
-		// Hack to attempt to retain the player after code swaps during development
-		if(null == currentCharacter)
-			setCurrentCharacter(mostRecentPlayer);
-
 		return currentCharacter;
 	}
 
 	public void setCurrentCharacter(ScoreoidPlayer scoreoidPlayer)
 	{
-		mostRecentPlayer = scoreoidPlayer;
 		Player player = new Player(scoreoidPlayer.playerName,
 									getWeapon(scoreoidPlayer.weapon),
 									scoreoidPlayer.xp,

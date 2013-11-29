@@ -34,16 +34,16 @@ public class CamControl : MonoBehaviour {
 		cameraRects.Add(2,twoDice);
 		// Three-die rects list
 		List<Rect> threeDice = new List<Rect>();
+		threeDice.Add(new Rect(   0, 0.5f,    1,    1));
 		threeDice.Add(new Rect(   0,    0, 0.5f, 0.5f));
 		threeDice.Add(new Rect(0.5f,    0,    1, 0.5f));
-		threeDice.Add(new Rect(   0, 0.5f,    1,    1));
 		cameraRects.Add(3,threeDice);
 		// Four-die rects list
 		List<Rect> fourDice = new List<Rect>();
-		fourDice.Add(new Rect(   0,    0, 0.5f, 0.5f));
-		fourDice.Add(new Rect(0.5f,    0,    1, 0.5f));
 		fourDice.Add(new Rect(   0, 0.5f, 0.5f,    1));
 		fourDice.Add(new Rect(0.5f, 0.5f,    1,    1));
+		fourDice.Add(new Rect(   0,    0, 0.5f, 0.5f));
+		fourDice.Add(new Rect(0.5f,    0,    1, 0.5f));
 		cameraRects.Add(4,fourDice);
 	}
 	

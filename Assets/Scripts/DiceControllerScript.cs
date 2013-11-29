@@ -15,7 +15,6 @@ public class DiceControllerScript : MonoBehaviour {
 	public GameObject d20;
 	public GameObject d100;
 	public List<Material> DiceMats;
-	public AudioSource DiceRoll;
 
 	List<GameObject> dice;
 	int dieCount = 0;

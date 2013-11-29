@@ -75,6 +75,7 @@ public class GUIControllerScript : MonoBehaviour {
 	float diceThrowTimer;
 
 	List<Weapon> randomWeaponChoices;
+	bool bRandomWeaponChoicesSet;
 
 	string currentDie = "d4";
 	float rewardTickTimer = 0.0f;
@@ -110,7 +111,9 @@ public class GUIControllerScript : MonoBehaviour {
 	float currentAcceleration = 1;
 
 	string previousRect;
-	
+
+	Dictionary<string,Texture> diceIcons;
+
 	NewCharacter character;
 
 	public class NewCharacter
@@ -128,10 +131,11 @@ public class GUIControllerScript : MonoBehaviour {
 		Right,
 	}
 
-	Dictionary<string,Texture> diceIcons;
-
-	void Start ()
+	// Use this for initialization
+	void OnEnable ()
 	{
+		previousGameState = GameState.NoState;
+
 		diceIcons = new Dictionary<string, Texture>();
 		diceIcons.Add("d4",d4Icon);
 		diceIcons.Add("d6",d6Icon);
@@ -140,12 +144,6 @@ public class GUIControllerScript : MonoBehaviour {
 		diceIcons.Add("d12",d12Icon);
 		diceIcons.Add("d20",d20Icon);
 		diceIcons.Add("d100",d100Icon);
-	}
-
-	// Use this for initialization
-	void OnEnable ()
-	{
-		previousGameState = GameState.NoState;
 
 		battleText = "";
 		characterNameInput = "";
@@ -200,19 +198,25 @@ public class GUIControllerScript : MonoBehaviour {
 
 		battleWindowRects["BattleQueueOn"] 		= new Rect(Screen.width - Screen.width*0.35f, 5f, Screen.width*0.35f, Screen.height*0.3f);
 		battleWindowRects["BattleTextOn"] 		= new Rect(Screen.width*0.45f, 5f, Screen.width - Screen.width*0.45f, Screen.height*0.45f);
-		battleWindowRects["ActionSelectionOn"]	= new Rect(Screen.width*0.008f, Screen.height*0.6f, Screen.width*0.55f, Screen.height*0.4f);
-		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width - Screen.width*0.35f, Screen.height - Screen.height*0.45f,
-		                                               		Screen.width*0.35f, Screen.height*0.45f);
+		battleWindowRects["ActionSelectionOn"]	= new Rect(Screen.width*0.008f, Screen.height*0.6f, Screen.width*0.5f, Screen.height*0.4f);
+		battleWindowRects["BattleStatsOn"]		= new Rect(Screen.width - Screen.width*0.25f,
+		                                               		Screen.height*0.4f,
+		                                               		Screen.width*0.25f, Screen.height*0.6f);
+		battleWindowRects["CurrentWeaponOn"]	= new Rect(Screen.width*0.008f, 5f, Screen.width*0.3f, Screen.height*0.65f);
+		/*= new Rect(Screen.width*0.5f, Screen.height*0.45f,
+		           Screen.width*0.25f, Screen.height*0.55f);*/
 
 		battleWindowRects["BattleQueueOff"] 	= new Rect(Screen.width, -Screen.height*0.2f, Screen.width*0.25f, Screen.height*0.2f);
 		battleWindowRects["BattleTextOff"] 		= new Rect(Screen.width, -Screen.height*45f, Screen.width*0.45f, Screen.height*0.45f);
 		battleWindowRects["ActionSelectionOff"]	= new Rect(Screen.width*0.008f, Screen.height, Screen.width*0.55f, Screen.height*0.45f);
 		battleWindowRects["BattleStatsOff"]		= new Rect(-Screen.width*0.2f, -Screen.height*0.6f, Screen.width*0.25f, Screen.height*0.6f);
+		battleWindowRects["CurrentWeaponOff"]	= new Rect(Screen.width*0.55f, Screen.height, Screen.width*0.25f, Screen.height*0.55f);
 
 		windowRects["ActionSelection"] 	= new Rect(battleWindowRects["ActionSelectionOff"]);
 		windowRects["BattleStats"] 		= new Rect(battleWindowRects["BattleStatsOff"]);
 		windowRects["BattleQueue"] 		= new Rect(battleWindowRects["BattleQueueOff"]);
 		windowRects["BattleText"] 		= new Rect(battleWindowRects["BattleTextOff"]);
+		windowRects["CurrentWeapon"]	= new Rect(battleWindowRects["CurrentWeaponOff"]);
 
 
 	}
@@ -246,6 +250,8 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 			DoTransition();
 		}
+
+		FadeWindows(bFadeWindows);
 	}
 	
 	void OnGUI()
@@ -401,6 +407,8 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 		case GameState.Title:
 
+			bFadeWindows = false;
+
 			bFinishedTransitioning = TransitionToTarget("Title", Direction.Right);
 
 			if(true == bFinishedTransitioning)
@@ -440,8 +448,10 @@ public class GUIControllerScript : MonoBehaviour {
 
 		case GameState.PlayerProfile:
 
+			bStartedBattle = false;
+
 			bFinishedTransitioning = TransitionToTarget("PlayerProfile", Direction.Left);
-			
+
 			if(true == bFinishedTransitioning)
 			{
 				windowRects["PlayerProfile"] = new Rect(gameMenuRect);
@@ -473,6 +483,8 @@ public class GUIControllerScript : MonoBehaviour {
 			break;
 
 		case GameState.BattleOver:
+		
+			bFadeWindows = false;
 
 			if(false == bTransitioningBattleWindows)
 			{
@@ -482,9 +494,9 @@ public class GUIControllerScript : MonoBehaviour {
 				
 				if(true == bFinishedTransitioning)
 				{
+					GUI.color = new Color(GUI.color.r, GUI.color.g, GUI.color.b, 1f);
 					bDoTransition = false;
-					bThrowingDice = false;
-					TransitionBattleWindowsOn();
+
 					previousRect = "BattleOver";
 				}
 			}
@@ -494,6 +506,7 @@ public class GUIControllerScript : MonoBehaviour {
 	}
 
 
+	// TODO: Kinda deprecated, as is obvious if you read this and see that all are left on
 	void GUI_BattleWindows_PlaceOffScreen()
 	{
 		// TODO: Place each window-rect at its respective off-screen location instantly, for transitioning in
@@ -501,37 +514,54 @@ public class GUIControllerScript : MonoBehaviour {
 		windowRects["BattleQueue"] = new Rect(battleWindowRects["BattleQueueOn"]);
 		windowRects["BattleText"] = new Rect(battleWindowRects["BattleTextOn"]);
 		windowRects["BattleStats"] = new Rect(battleWindowRects["BattleStatsOn"]);
+		windowRects["CurrentWeapon"] = new Rect(battleWindowRects["CurrentWeaponOn"]);
 	}
+
+	bool bFadeWindows = false;
 
 	public void TransitionBattleWindowsOff()
 	{
 		bTransitioningBattleWindowsOn = false;
 		bTransitioningBattleWindows = true;
+		bFadeWindows = true;
 	}
 
 	public void TransitionBattleWindowsOn()
 	{
-		bTransitioningBattleWindowsOn = true;
-		bTransitioningBattleWindows = true;
+		if(Utilities().getGameState().Equals(GameState.BattleMode))
+		{
+			bTransitioningBattleWindowsOn = true;
+			bTransitioningBattleWindows = true;
+			bFadeWindows = false;
+		}
 	}
 
-	static float MINIMUM_OPACITY = .2f;
+	static float MINIMUM_OPACITY = .4f;
+	static float MAXIMUM_ACCELERATION = 10;
 	Color currentGUIColor;
+
+	void FadeWindows(bool bOn)
+	{
+		float targetOpacity = 0.90f;
+		
+		if(true == bOn)
+		{
+			targetOpacity = MINIMUM_OPACITY;
+		}
+
+		currentGUIColor = new Color(currentGUIColor.r, currentGUIColor.g, currentGUIColor.b, Mathf.MoveTowards(currentGUIColor.a, targetOpacity, 0.75f*Time.deltaTime));
+	}
 
 	void TransitionBattleWindows(bool bOn)
 	{
 		string onOff = "Off";
 		string windowName;
 		float speed = TransitionSpeed * currentAcceleration * Time.deltaTime;
-		float targetOpacity = MINIMUM_OPACITY;
 	
 		if(true == bOn)
 		{
 			onOff = "On";
-			targetOpacity = 100f;
 		}
-
-		currentGUIColor = new Color(GUI.color.r, GUI.color.g, GUI.color.b, Mathf.MoveTowards(GUI.color.a, targetOpacity, 4*Time.deltaTime));
 
 		/*
 		windowName = "BattleStats";
@@ -541,12 +571,14 @@ public class GUIControllerScript : MonoBehaviour {
 		                  									speed),
 		                                   windowRects[windowName].width, windowRects[windowName].height);
 		*/
+
 		windowName = "ActionSelection";
 		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
 		                                                     speed),
 		                                   Mathf.MoveTowards(windowRects[windowName].y, battleWindowRects[windowName+onOff].y,
 		                  									speed),
 		                                   windowRects[windowName].width, windowRects[windowName].height);
+
 		/*
 		windowName = "BattleText";
 		windowRects[windowName] = new Rect(Mathf.MoveTowards(windowRects[windowName].x, battleWindowRects[windowName+onOff].x,
@@ -562,14 +594,14 @@ public class GUIControllerScript : MonoBehaviour {
 		bool bBattleTextDone = true; //windowRects["BattleText"].x == battleWindowRects["BattleText"+onOff].x;
 
 		// Check to see if each window is in its proper place
-		if(bActionSelectionDone && bBattleQueueDone && bBattleStatsDone && bBattleTextDone && currentGUIColor.a == targetOpacity)
+		if(bActionSelectionDone && bBattleQueueDone && bBattleStatsDone && bBattleTextDone)
 		{
 			bTransitioningBattleWindows = false;
 			currentAcceleration = 0;
 		}
 		else
 		{
-			currentAcceleration += 3*Time.deltaTime;
+			currentAcceleration = Mathf.MoveTowards(currentAcceleration, MAXIMUM_ACCELERATION, 2*Time.deltaTime);
 		}
 	}
 
@@ -682,9 +714,9 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 
 		GUILayout.BeginHorizontal();	// | #Submit# <---> "message" <---> #Back# |
-		if(GUILayout.Button("Submit"))
+		if(GUILayout.Button("Back"))
 		{
-			SubmitInput();
+			Utilities().setGameState(GameState.Title);
 		}
 
 		GUILayout.FlexibleSpace();
@@ -693,11 +725,12 @@ public class GUIControllerScript : MonoBehaviour {
 			GUILayout.Box(responseMessage, "LegendaryText");
 
 		GUILayout.FlexibleSpace();
-
-		if(GUILayout.Button("Back"))
+		
+		if(GUILayout.Button("Submit"))
 		{
-			Utilities().setGameState(GameState.Title);
+			SubmitInput();
 		}
+
 		GUILayout.EndHorizontal();
 		GUILayout.EndVertical();
 	}
@@ -706,88 +739,137 @@ public class GUIControllerScript : MonoBehaviour {
 	{
 		GUILayout.BeginHorizontal();
 		GUILayout.Box(string.Format("{0}", modifierName), "LightOutlineText");
+		GUILayout.FlexibleSpace();
 		GUILayout.Box(string.Format("{0}", stat), style);
 		GUILayout.EndHorizontal();
 	}
 
-	bool WeaponSelectItem(Weapon weapon, bool bSelectable=false)
+	void WeaponItemTopBar(string name, Weapon.Type type, Roll roll)
 	{
-		bool selected = false;
 		string weaponType = "WeaponTypeIcon";
 		string dieColor = "WeaponRoll_";
-
-		if(weapon.type == Weapon.Type.Melee)
+		
+		dieColor += roll.dieName;
+		
+		if(type == Weapon.Type.Melee)
 			weaponType += "Melee";
-		else if(weapon.type == Weapon.Type.Ranged)
+		else if(type == Weapon.Type.Ranged)
 			weaponType += "Ranged";
-		else if(weapon.type == Weapon.Type.Magical)
+		else if(type == Weapon.Type.Magical)
 			weaponType += "Magical";
 
-		dieColor += weapon.roll.dieName;
+		GUILayout.BeginHorizontal(GUILayout.Height(25));
 
-		GUILayout.BeginVertical(GUILayout.Width(150), GUILayout.Height(320));			// Main Panel
-
-		GUILayout.Box(string.Format("{0}", weapon.name), "WeaponName");
-
-		// Main Weapon Description Area
-		GUILayout.BeginHorizontal(GUILayout.Width(50), GUILayout.Height(130));		// Weapon Description
 		GUILayout.Space(15);
-		// The Column section containing the Level and Type of the weapon
+		
+		GUILayout.Box("", weaponType, GUILayout.Width(30), GUILayout.Height(30));
+		GUILayout.Box(string.Format("{0}", name), "WeaponName");
+		GUILayout.Box(string.Format("{0}{1}", roll.count, roll.dieName), dieColor, GUILayout.Width(30), GUILayout.Height(30));
+		//GUILayout.Box(string.Format("{0}", roll.count), dieColor, GUILayout.Width(30), GUILayout.Height(30));
 
-		GUILayout.BeginVertical();	 // Level/Type/Roll
+		GUILayout.Space(15);
+		
+		GUILayout.EndHorizontal();
+	}
+
+	void WeaponItemDetails(Weapon weapon)
+	{
+		GUILayout.BeginHorizontal();
+
+		GUILayout.Space(15);
+		
 		// Type image
-		GUILayout.Box("", weaponType);
+		GUILayout.Box(diceIcons[weapon.roll.dieName], GUILayout.Width(85), GUILayout.Height(85));
+
 		GUILayout.FlexibleSpace();
-		// Level number
+
+		// Vertical column of modifiers
+		GUILayout.BeginVertical();
+
 		WeaponItemModifier("Lvl: ", weapon.level, "WeaponLevel");
-		GUILayout.EndVertical();			// Level/Type/Roll
+		WeaponItemModifier("Dmg: ", weapon.damageModifier, weapon.damageModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+		WeaponItemModifier("Spd: ", weapon.speedModifier, weapon.speedModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+		WeaponItemModifier("Def: ", weapon.defenseModifier, weapon.defenseModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier");
 
-		GUILayout.BeginVertical();
-		// Type image
-		GUILayout.Box(diceIcons[weapon.roll.dieName]);
-		// Space to span down to the bottom of this area
-		GUILayout.Box(string.Format("{0}{1}", weapon.roll.count, weapon.roll.dieName), dieColor);
 		GUILayout.EndVertical();
 
-		GUILayout.BeginVertical();
-		WeaponItemModifier("Dmg: ", weapon.damageModifier);
-		WeaponItemModifier("Spd: ", weapon.speedModifier);
-		WeaponItemModifier("Def: ", weapon.defenseModifier);
-		GUILayout.EndVertical();
+		GUILayout.Space(15);
+		
+		GUILayout.EndHorizontal();
+	}
 
-		GUILayout.EndHorizontal();			// Weapon Description
-
-		GUILayout.Box("", "Divider");
-
+	void WeaponItemAttacks(Dictionary<string,Attack>.ValueCollection attacks)
+	{
 		int attackCount = 0;
+
 		GUILayout.Box("Actions", "WeaponActionTitle");
-		foreach(Attack attack in weapon.attacks.Values)
+		GUILayout.BeginHorizontal();
+		GUILayout.Space(10);
+		GUILayout.BeginVertical();
+		GUILayout.Box("", "Divider");
+		foreach(Attack attack in attacks)
 		{
 			attackCount++;
 			GUILayout.BeginHorizontal();
-			GUILayout.Box(attack.name, "WeaponActionName", GUILayout.Width(80));
 
-			WeaponItemModifier("Hit: ", attack.hitModifier);
-			WeaponItemModifier("Dmg: ", attack.damageModifier);
-			GUILayout.FlexibleSpace();
+			GUILayout.Box(attack.name, "WeaponActionName", GUILayout.Width(80));
+			WeaponItemModifier("Hit: ", attack.hitModifier, attack.hitModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+			WeaponItemModifier("Dmg: ", attack.damageModifier, attack.damageModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+
 			GUILayout.EndHorizontal();
+
+			GUILayout.Box("", "Divider");
 		}
 
-		if(2 > attackCount)
-			GUILayout.Space(25);
+		GUILayout.EndVertical();
+		GUILayout.Space(10);
+		GUILayout.EndHorizontal();
+	}
+
+	static float WEAPON_SELECT_ITEM_WIDTH = 210;
+	static float WEAPON_SELECT_ITEM_HEIGHT = 340;
+
+	bool WeaponSelectItem(Weapon weapon, bool bSelectable=false)
+	{
+		bool selected = false;
+		Rect lastRect;
+
+		if(null == weapon)
+			return false;
+
+		/******/
+		GUILayout.BeginVertical(GUILayout.Width(WEAPON_SELECT_ITEM_WIDTH), GUILayout.Height(WEAPON_SELECT_ITEM_HEIGHT));
+
+		GUILayout.Space(10);
+
+		WeaponItemTopBar(weapon.name, weapon.type, weapon.roll);
+
+		GUILayout.Box("", "Divider");
+
+		WeaponItemDetails(weapon);
+
+		GUILayout.Box("", "Divider");
+
+		WeaponItemAttacks(weapon.attacks.Values);
 
 		GUILayout.FlexibleSpace();
 
-		if(bSelectable)
+		GUILayout.BeginHorizontal();
+		GUILayout.FlexibleSpace();
+		if(bSelectable && (GUILayout.Button("Select", "ShortButton")))
 		{
-			if(GUILayout.Button("Select", "ShortButton"))
-			{
-				selected = true;
-			}
+			selected = true;
 		}
-		GUILayout.EndVertical();			// Main Panel
+		GUILayout.FlexibleSpace();
+		GUILayout.EndHorizontal();
 
-		GUI.Box(GUILayoutUtility.GetLastRect(), "");
+		GUILayout.Space(10);
+
+		GUILayout.EndVertical();
+
+		lastRect = GUILayoutUtility.GetLastRect();
+
+		GUI.Box(lastRect, "");
 
 		return selected;
 	}
@@ -805,6 +887,7 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 
 		weaponSelectScrollview = GUILayout.BeginScrollView(weaponSelectScrollview);
+
 		GUILayout.BeginHorizontal();
 		foreach(Weapon weaponType in Utilities().getWeaponTypes(1))
 		{
@@ -820,15 +903,15 @@ public class GUIControllerScript : MonoBehaviour {
 
 		}
 		GUILayout.EndHorizontal();
+
 		GUILayout.EndScrollView();
 	
 		GUILayout.FlexibleSpace();
 	}
 
-
+	bool bStartedBattle = false;
 	void GUI_PlayerProfile(int windowID)
 	{
-
 		Player player = Utilities().getCurrentCharacter();
 
 		AddSpikes(windowRects["PlayerProfile"].width-80, true);
@@ -838,33 +921,41 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 
 		GUILayout.BeginHorizontal();
+
 		GUILayout.FlexibleSpace();
 		GUILayout.Box(string.Format("Name: {0}\nLevel: {1}\nXP: {2}\nChange: {3}\nKills: {4}",
-									player.name, player.level, player.xp, player.change, player.kills));
+		                            player.name, player.level, player.xp, player.change, player.kills),
+		              GUILayout.Width(WEAPON_SELECT_ITEM_WIDTH), GUILayout.Height(WEAPON_SELECT_ITEM_HEIGHT));
 		GUILayout.FlexibleSpace();
 		WeaponSelectItem(player.weapon);
 		GUILayout.FlexibleSpace();
+
 		GUILayout.EndHorizontal();
 
 		GUILayout.FlexibleSpace();
 
 		GUILayout.BeginHorizontal();
 		GUILayout.FlexibleSpace();
-		if(GUILayout.Button("Start Battle"))
-		{
-			// Now that the battle is initialized, switch the gamestate to battle-mode
-			Utilities().StartBattle();
-			Utilities().setGameState(GameState.BattleMode);
-		}
-		GUILayout.Space(20);
 		if(GUILayout.Button("Log Off"))
 		{
 			Utilities().setGameState(GameState.Title);
 		}
+		GUILayout.Space(100);
+		if(GUILayout.Button("Start Battle"))
+		{
+			if(!bStartedBattle)
+			{
+				bStartedBattle = true;
+				// Now that the battle is initialized, switch the gamestate to battle-mode
+				Utilities().StartBattle();
+				Utilities().setGameState(GameState.BattleMode);
+			}
+		}
+
 		GUILayout.FlexibleSpace();
 		GUILayout.EndHorizontal();
 
-		GUILayout.FlexibleSpace();
+		//GUILayout.FlexibleSpace();
 
 		GUILayout.EndVertical();
 
@@ -888,10 +979,22 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.BeginHorizontal();
 		foreach(BattleAction action in Utilities().getCurrentTurnActor().getActions())
 		{
-			if(GUILayout.Button(string.Format("{0} {1}", action.name,
-			                                  action.hitModifier != 0 ?
-			                                  (action.hitModifier > 0 ? "+"+action.hitModifier.ToString() : action.hitModifier.ToString())
-			                                  : "" )))
+			int hitModifier = action.hitModifier;
+			string hitModifierText = "";
+			int dmgModifier = (action as Attack).damageModifier;
+			string dmgModifierText = "";
+
+			if(hitModifier != 0)
+			{
+				hitModifierText = string.Format("(Hit:{0}{1})", (hitModifier > 0) ? "+" : "", hitModifier.ToString());
+			}
+
+			if(dmgModifier != 0)
+			{
+				dmgModifierText = string.Format("(Dmg:{0}{1})", (dmgModifier > 0) ? "+" : "", dmgModifier.ToString());
+			}
+
+			if(GUILayout.Button(string.Format("{0} {1} {2}", action.name, hitModifierText, dmgModifierText)))
 			{
 				Utilities().SelectedAction(action);
 			}
@@ -971,27 +1074,65 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndHorizontal();
 	}
 
+	void GUI_BattleMode_CurrentWeapon(int windowID)
+	{
+		AddSpikes(windowRects["CurrentWeapon"].width);
+		//GUILayout.Space(2);
+		BattleActor actor = Utilities().getCurrentTurnActor();
+
+		if(null == actor)
+		{
+			return;
+		}
+
+		GUILayout.BeginHorizontal();
+		GUILayout.FlexibleSpace();
+		WeaponSelectItem(actor.weapon);
+		GUILayout.FlexibleSpace();
+		GUILayout.EndHorizontal();
+	}
+
 	void GUI_BattleMode_BattleQueue()
 	{
-		GUILayout.BeginHorizontal();
+		float width_height = 50;
+		Rect rect;
 
 		Queue<BattleRound> queue = Utilities().getBattleQueue();
+
+		GUILayout.BeginVertical();
+		GUILayout.Box("Battle Queue", "PlainText");
+
+		GUILayout.Box("", "Divider");
+
+		GUILayout.BeginHorizontal();
 
 		if(null != queue)
 		{
 			foreach(BattleRound round in queue)
 			{
 				//GUILayout.Box("", (round.bIsPlayer) ? "QueueMember" : "QueueMemberEnemy");
-				GUILayout.Box("", "QueueMember");
-				GUI.Box(GUILayoutUtility.GetLastRect(), string.Format("{0}{1}", round.actor.name[0], round.actor.name[1]), "QueueMemberOverlay");
+				GUILayout.BeginVertical();
+				GUILayout.BeginHorizontal();
+				GUILayout.FlexibleSpace();
+				GUILayout.Box("", "QueueMember", GUILayout.Width(width_height), GUILayout.Height(width_height));
+				rect = GUILayoutUtility.GetLastRect();
+				GUILayout.FlexibleSpace();
+				GUILayout.EndHorizontal();
+				GUILayout.EndVertical();
+
+				GUI.Box(rect, string.Format("{0}{1}", round.actor.name[0], round.actor.name[1]), "QueueMemberOverlay");
+				GUILayout.Space(7);
+				width_height -= 5;
 			}
 		}
 
 		GUILayout.EndHorizontal();
+		GUILayout.EndVertical();
 	}
 
 	void GUI_BattleMode_BattleStat(BattleActor actor)
 	{
+		string lifeMeterStyle = "LifeMeterName";
 		BattleRound currentTurn = Utilities().getCurrentTurn();
 
 		GUILayout.BeginHorizontal();
@@ -1003,7 +1144,10 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.BeginVertical();
 
-		GUILayout.Label(string.Format("{0}", actor.name), "LifeMeterName");										// Actor name
+		if((null != currentTurn) && (actor == Utilities().getCurrentCharacter()))
+			lifeMeterStyle = "LifeMeterNamePlayer";
+	
+		GUILayout.Label(string.Format("{0}", actor.name), lifeMeterStyle);										// Actor name
 
 		GUILayout.BeginHorizontal();
 		GUILayout.Box("", "LifeMeter");																			// Life-meter ribbon
@@ -1035,9 +1179,13 @@ public class GUIControllerScript : MonoBehaviour {
 			GUI_BattleMode_BattleStat(enemy);
 		}
 
-		GUILayout.Space(15);
+		GUILayout.Space(3);
+		GUILayout.FlexibleSpace();
 
+		GUILayout.BeginHorizontal();
+		GUILayout.FlexibleSpace();
 		GUI_BattleMode_BattleQueue();
+		GUILayout.EndHorizontal();
 
 		GUILayout.EndVertical();
 	}
@@ -1093,9 +1241,10 @@ public class GUIControllerScript : MonoBehaviour {
 		if(true == bDoBattleWindow)
 		{
 			windowRects["ActionSelection"] = GUI.Window(windowID++, windowRects["ActionSelection"], GUI_BattleMode_actionSelection, "Actions");
-			windowRects["BattleText"] = GUI.Window(windowID++, windowRects["BattleText"], GUI_BattleMode_BattleText, "");
+			windowRects["BattleText"] = GUI.Window(windowID++, windowRects["BattleText"], GUI_BattleMode_BattleText, "History");
 			//windowRects["BattleQueue"] = GUI.Window(windowID++, windowRects["BattleQueue"], GUI_BattleMode_BattleQueue, "Battle Queue");
-			windowRects["BattleStats"] = GUI.Window(windowID++, windowRects["BattleStats"], GUI_BattleMode_BattleStats, "");
+			windowRects["BattleStats"] = GUI.Window(windowID++, windowRects["BattleStats"], GUI_BattleMode_BattleStats, "Fighters");
+			windowRects["CurrentWeapon"] = GUI.Window(windowID++,windowRects["CurrentWeapon"], GUI_BattleMode_CurrentWeapon, "Current Weapon");
 		}
 		return windowID;
 	}
@@ -1103,25 +1252,28 @@ public class GUIControllerScript : MonoBehaviour {
 	List<Weapon> GetRandomWeaponOptions(int level, int count)
 	{
 		List<Weapon> allWeaponsForLevel = Utilities().getWeaponTypes(level);
-
 		List<Weapon> randomSelection = new List<Weapon>();
 
 		for(int w=0; w < count; w++)
 		{
-			randomSelection.Add(allWeaponsForLevel[Random.Range(0,randomSelection.Count)]);
+			Weapon randomWeapon = allWeaponsForLevel[Random.Range(0,randomSelection.Count)];
+			randomSelection.Add(randomWeapon);
+			allWeaponsForLevel.Remove(randomWeapon);	// Don't show the same weapon more than once
 		}
 
 		return randomSelection;
 	}
 
 	Vector2 changeWeaponScroll = Vector3.zero;
+
 	void GUI_BattleOver(int windowID)
 	{
 		Character playerCharacter = Utilities().getCurrentCharacter();
 
-		if(null == randomWeaponChoices || 0 == randomWeaponChoices.Count)
+		if(false == bRandomWeaponChoicesSet)
 		{
 			randomWeaponChoices = GetRandomWeaponOptions(Utilities().getCurrentCharacter().level, 3);
+			bRandomWeaponChoicesSet = true;
 		}
 
 		AddSpikes(windowRects["BattleOver"].width-80, true);
@@ -1129,20 +1281,42 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.BeginVertical();
 		GUILayout.Space(10);
 
-		GUILayout.Box("Battle Over", "SubTitleBox"); 		//TODO: Need a custom style for the title
-		GUILayout.Box(string.Format("{0} the victor",
-									(bPlayerIsVictorious ? playerCharacter.name + " is" : "The Enemy was")),
-		              				"LegendaryText");
+		GUILayout.Box("Battle Over", "SubTitleBox");
 
 		GUILayout.BeginHorizontal();
 		GUILayout.Space(15);
 
 		GUILayout.BeginVertical();
+
+		GUILayout.Box(string.Format("{0} the victor",
+		                            (bPlayerIsVictorious ? playerCharacter.name + " is" : "The Enemy was")),
+		              "LegendaryText");
+
 		GUILayout.Label(string.Format("Spare Change: {0}", playerCharacter.change), "LegendaryText");
 		GUILayout.Space(5);
 		GUILayout.Label(string.Format("Experience: {0}", playerCharacter.xp), "LegendaryText");
 		GUILayout.Space(5);
 		GUILayout.Label(string.Format("Kills: {0}", playerCharacter.kills), "LegendaryText");
+
+		GUILayout.FlexibleSpace();
+
+		if(true == bFinishedRewarding)
+		{
+			GUILayout.BeginHorizontal();
+			
+			if(GUILayout.Button("Return to Player Profile"))
+			{
+				Utilities().setGameState(GameState.PlayerProfile);
+			}
+			
+			GUILayout.EndHorizontal();
+		}
+		
+		//GUILayout.FlexibleSpace();
+		
+		if(false == responseMessage.Equals(""))
+			GUILayout.Box(responseMessage, "LegendaryText");
+
 		GUILayout.EndVertical();
 
 		GUILayout.Space(15);
@@ -1152,43 +1326,37 @@ public class GUIControllerScript : MonoBehaviour {
 			if(false == bChangedWeapon)
 			{
 				// Show possible weapon change options, here
-				GUILayout.BeginHorizontal();
-				GUILayout.Space(15);
-				GUILayout.BeginHorizontal();
-				GUILayout.Label("Change Weapons?");
+				GUILayout.BeginVertical();
+
+				GUILayout.Label("Change Weapons?", GUILayout.Height(15));
 
 				changeWeaponScroll = GUILayout.BeginScrollView(changeWeaponScroll);
+				GUILayout.BeginHorizontal();
 				foreach(Weapon weapon in randomWeaponChoices)
 				{
-					WeaponSelectItem(weapon, true);
+					bool selected = WeaponSelectItem(weapon, true);
+					if(selected)
+					{
+						Utilities().UpdatePlayer(playerCharacter.name, 0, 0, 0, 1, weapon.name);
+						bChangedWeapon = true;
+						bRandomWeaponChoicesSet = false;
+					}
 				}
+				GUILayout.EndHorizontal();
 				GUILayout.EndScrollView();
 
-				GUILayout.EndHorizontal();
 				GUILayout.Space(15);
-				GUILayout.EndHorizontal();
+				GUILayout.EndVertical();
 			}
+			else {
+				GUILayout.FlexibleSpace();
+			}
+		}
+		else {
+			GUILayout.FlexibleSpace();
 		}
 
 		GUILayout.EndHorizontal();
-
-
-		if(true == bFinishedRewarding)
-		{
-			GUILayout.BeginHorizontal();
-
-			if(GUILayout.Button("Return to Player Profile"))
-			{
-				Utilities().setGameState(GameState.PlayerProfile);
-			}
-
-			GUILayout.EndHorizontal();
-		}
-
-		GUILayout.FlexibleSpace();
-
-		if(false == responseMessage.Equals(""))
-			GUILayout.Box(responseMessage, "LegendaryText");
 
 		GUILayout.EndVertical();
 	}
