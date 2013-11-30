@@ -1,7 +1,7 @@
 =============
-Web Role Play
+Spare Change
 =============
-A Web interface for role playing casually and without a strong commitment.
+Dice Fighting, Changing weapons, Collecting Spare Change,... all in a day's usual activities.
 
 =======
 ![GitHub Game Off Game Jam](https://f.cloud.github.com/assets/121322/1436486/25f88b78-4158-11e3-9b23-43596516362c.png)
