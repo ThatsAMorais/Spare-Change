@@ -91,6 +91,7 @@ public class GUIControllerScript : MonoBehaviour {
 
 	bool bDoTitleWindow;
 	bool bDoLoginWindow;
+	bool bDoInstructionsWindow;
 	bool bDoWeaponSelectWindow;
 	bool bDoPlayerProfileWindow;
 	bool bDoBattleWindow;
@@ -195,6 +196,7 @@ public class GUIControllerScript : MonoBehaviour {
 		windowRects["WeaponSelect"] 	= new Rect(gameMenuRect);
 		windowRects["PlayerProfile"] 	= new Rect(gameMenuRect);
 		windowRects["BattleOver"] 		= new Rect(gameMenuRect);
+		windowRects["Instructions"]		= new Rect(gameMenuRect);
 
 		battleWindowRects["BattleQueueOn"] 		= new Rect(Screen.width - Screen.width*0.35f, 5f, Screen.width*0.35f, Screen.height*0.3f);
 		battleWindowRects["BattleTextOn"] 		= new Rect(Screen.width*0.45f, 5f, Screen.width - Screen.width*0.45f, Screen.height*0.45f);
@@ -285,7 +287,13 @@ public class GUIControllerScript : MonoBehaviour {
 				bDoLoginWindow = true;
 				GUI.FocusWindow(windowIDs["Login"]);
 				break;
-				
+
+			case GameState.Instructions:
+				windowRects["Instructions"] = new Rect(offScreenRects[Direction.Right]);
+				bDoInstructionsWindow = true;
+				GUI.FocusWindow(windowIDs["Instructions"]);
+				break;
+
 			case GameState.WeaponSelection:
 				windowRects["WeaponSelect"] = new Rect(offScreenRects[Direction.Right]);
 				bDoWeaponSelectWindow = true;
@@ -298,7 +306,6 @@ public class GUIControllerScript : MonoBehaviour {
 				
 			case GameState.BattleMode:
 				bThrowingDice = false;
-				
 				// Wait until the transitioning out of the last window before enabling battlemode
 				GUI_BattleWindows_PlaceOffScreen();
 				bDoBattleWindow = false;
@@ -320,7 +327,10 @@ public class GUIControllerScript : MonoBehaviour {
 		
 		windowIDs["Login"] = windowID++;
 		GUI_Login_Window(windowIDs["Login"]);
-		
+
+		windowIDs["Instructions"] = windowID++;
+		GUI_Instructions_Window(windowIDs["Instructions"]);
+
 		windowIDs["WeaponSelect"] = windowID++;
 		GUI_WeaponSelect_Window(windowIDs["WeaponSelect"]);
 		
@@ -414,6 +424,7 @@ public class GUIControllerScript : MonoBehaviour {
 			if(true == bFinishedTransitioning)
 			{
 				bDoLoginWindow = false;
+				bDoInstructionsWindow = false;
 				bDoTransition = false;
 				previousRect = "Title";
 			}
@@ -430,6 +441,18 @@ public class GUIControllerScript : MonoBehaviour {
 				bDoTitleWindow = false;
 				bDoTransition = false;
 				previousRect = "Login";
+			}
+			break;
+
+		case GameState.Instructions:
+			
+			bFinishedTransitioning = TransitionToTarget("Instructions", Direction.Left);
+			
+			if(true == bFinishedTransitioning)
+			{
+				bDoTitleWindow = false;
+				bDoTransition = false;
+				previousRect = "Instructions";
 			}
 			break;
 
@@ -609,9 +632,15 @@ public class GUIControllerScript : MonoBehaviour {
 	{
 		if(true == bDoTitleWindow) windowRects["Title"] = GUI.Window(windowID, windowRects["Title"], GUI_TitleScreen, "");
 	}
+
 	void GUI_Login_Window(int windowID)
 	{
 		if(true == bDoLoginWindow) windowRects["Login"] = GUI.Window(windowID, windowRects["Login"], GUI_Register_Login, "");
+	}
+
+	void GUI_Instructions_Window(int windowID)
+	{
+		if(true == bDoInstructionsWindow) windowRects["Instructions"] = GUI.Window(windowID, windowRects["Instructions"], GUI_Instructions, "");
 	}
 
 	void GUI_WeaponSelect_Window(int windowID)
@@ -651,6 +680,10 @@ public class GUIControllerScript : MonoBehaviour {
 		{
 			bRegisteringNew = false;
 			Utilities().setGameState(GameState.Login);
+		}
+		if(GUILayout.Button("Instructions")) 		// TODO: Need a custom style for the menu items
+		{
+			Utilities().setGameState(GameState.Instructions);
 		}
 		GUILayout.EndVertical();
 	}
@@ -735,12 +768,167 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.EndVertical();
 	}
 
-	void WeaponItemModifier(string modifierName, int stat, string style="WeaponModifier")
+	void Instructions_Title(string title, string description)
+	{
+		GUILayout.Label(title, "LegendaryText", GUILayout.Height(10));
+		GUILayout.Space(5);
+		if(description.Length > 0)
+		{
+			GUILayout.Label(description, "PlainText");
+			GUILayout.Space(5);
+		}
+	}
+
+	void Instructions_Element(string elementName, string description)
 	{
 		GUILayout.BeginHorizontal();
+		GUILayout.Label(elementName + ":", "ShortLabel", GUILayout.Width(200));
+		GUILayout.Space(15);
+		GUILayout.Label(description, "CursedText");
+		GUILayout.EndHorizontal();
+	}
+
+	Vector2 instructionScroll = Vector2.zero;
+	void GUI_Instructions(int windowID)
+	{
+		List<GUILayoutOption> instructionPanelOptions = new List<GUILayoutOption>();
+		instructionPanelOptions.Add(GUILayout.Width(windowRects["Instructions"].width-140));
+		instructionPanelOptions.Add(GUILayout.Height(windowRects["Instructions"].height-300));
+
+		GUI.FocusWindow(windowID);
+		
+		AddSpikes(windowRects["Instructions"].width-80, true);
+
+		GUILayout.BeginVertical();
+
+		GUILayout.Label("Instructions", "InstructionsTitleBox");
+
+		GUILayout.Space(20);
+
+		instructionScroll = GUILayout.BeginScrollView(instructionScroll);
+
+		GUILayout.BeginVertical();
+
+		GUILayout.Space(10);
+		GUILayout.Box("", "Divider");
+		GUILayout.Space(10);
+
+		GUILayout.BeginHorizontal(instructionPanelOptions.ToArray());
+		GUILayout.BeginVertical();
+		Instructions_Title("Overview", "Spare Change is about battling foes, collecting change, choosing weapons, and unlocking new challenges.");
+		Instructions_Element("Registration", "Players create a Character Name and Password.");
+		Instructions_Element("Loading", "Players may Login and continue their progress.");
+		Instructions_Element("Profile","The Profile is the buffer between each Battle where the Player's Stats are displayed");
+		Instructions_Element("Battling", "Battles are randomized based on level, and present a variety of foes.");
+		Instructions_Element("Rewards", "Players are awarded XP and Spare Change for defeating all foes.");
+		Instructions_Element("Changing Weapons", "Upon completion of a Battle a Player may choose a new weapon.");
+		Instructions_Element("Leveling Up","By earning enough XP, the player will increase in Health, Gain access to new Weapons, and face new Enemies");
+		Instructions_Element("Character Saving","After each battle, the Character's stats are updated to the Spare Change scorekeeper.");
+		GUILayout.EndVertical();
+		GUILayout.EndHorizontal();
+
+		GUILayout.Space(10);
+		GUILayout.Box("", "Divider");
+		GUILayout.Space(10);
+		
+		GUILayout.BeginHorizontal(instructionPanelOptions.ToArray());
+		GUILayout.BeginVertical();
+		Instructions_Title("Battling", "Where Change and XP are awarded.");
+		Instructions_Element("Turn-based", "Combatants take turns in a queue based on their Speed + Modifiers.");
+		Instructions_Element("Selecting Actions", "Attack choices are presented based on the Player's Weapon");
+		Instructions_Element("Roll Chance-to-Hit", "Combatants must roll 10 or better on a d20, + modifiers, to Hit an opponent.");
+		Instructions_Element("Roll Damage", "Upon a successful Hit, the weapons Damage Roll is thrown, and total damage calculated");
+		Instructions_Element("Battle Finish", "The Battle ends when the Player kills all Enemies or is killed.");
+		Instructions_Element("Rewards","For defeating the enemies, XP and Spare Change are awarded.");
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+		GUILayout.EndHorizontal();
+
+		GUILayout.Space(10);
+		GUILayout.Box("", "Divider");
+		GUILayout.Space(10);
+
+		GUILayout.BeginHorizontal(instructionPanelOptions.ToArray());
+		GUILayout.BeginVertical();
+		Instructions_Title("The Player Card", "The card that all Players carry.");
+		Instructions_Element("Character Name", "...of Legend.");
+		Instructions_Element("Level", "Current XP Level achieved by this Character.");
+		Instructions_Element("XP", "Number of Experience Points from winning battles.");
+		Instructions_Element("Spare Change", "Money collected.");
+		Instructions_Element("Kills", "Number of kills achieved in battle.");
+		Instructions_Element("Weapon", "Brief description of the Equipped Weapon.");
+		Instructions_Element("Boss Battle Indicator", "Indicates the Next Battle will be a Boss.");
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+		
+		GUILayout.Space(10);
+		
+		GUILayout.BeginVertical();
+		Weapon bat = Utilities().getWeapon("Bat");
+		Player samplePlayer = new Player("Chu-chu-chuck Changes", bat, 1, 25, 10, 6 );
+		PlayerCard(samplePlayer, true);
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+		GUILayout.EndHorizontal();
+
+		GUILayout.Space(10);
+		GUILayout.Box("", "Divider");
+		GUILayout.Space(10);
+
+		GUILayout.BeginHorizontal(instructionPanelOptions.ToArray());
+		GUILayout.BeginVertical();
+		Instructions_Title("The Weapon Card", "A Weapon Card displays the details of a Weapon:");
+		Instructions_Element("Weapon Type Icon", "Melee, Ranged, or Magic.");
+		Instructions_Element("Weapon Name", "What you call it.");
+		Instructions_Element("Damage Roll", "Type and Quantity of Dice rolled for Damage.");
+		Instructions_Element("Damage Roll Icon", "Icon displaying the Type of Dice");
+		Instructions_Element("Level", "A measure of the Weapon's quality.");
+		Instructions_Element("Damage Modifier", "Affects all Damage rolls.");
+		Instructions_Element("Speed Modifier", "Affects the weilder's Initiative in battle.");
+		Instructions_Element("Defense Modifier", "Affects Chance-To-Hit rolls targeted at the weilder.");
+		Instructions_Element("Actions", "Battle Options and their modifiers when used.");
+		Instructions_Element("Action Hit Modifier", "Affects the ToHit.");
+		Instructions_Element("Action Damage Modifier", "Affects Damage.");
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+
+		GUILayout.Space(10);
+
+		GUILayout.BeginVertical();
+		WeaponSelectItem(bat);
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+		GUILayout.EndHorizontal();
+
+		GUILayout.Space(10);
+		GUILayout.Box("", "Divider");
+		GUILayout.Space(10);
+
+		GUILayout.EndVertical(); // scrolling panel container
+
+		GUILayout.EndScrollView();
+
+
+		// | #Back# <---> |
+		GUILayout.BeginHorizontal();
+		if(GUILayout.Button("Back"))
+		{
+			Utilities().setGameState(GameState.Title);
+		}
+		GUILayout.FlexibleSpace();
+		GUILayout.EndHorizontal();
+
+		GUILayout.EndVertical();
+	}
+
+	void WeaponItemModifier(string modifierName, int stat, string style="WeaponModifier", bool bShowPlus=true)
+	{
+		GUILayout.BeginHorizontal();
+		GUILayout.Space(5);
 		GUILayout.Box(string.Format("{0}", modifierName), "LightOutlineText");
 		GUILayout.FlexibleSpace();
-		GUILayout.Box(string.Format("{0}", stat), style);
+		GUILayout.Box(string.Format("{0}{1}", (bShowPlus && stat > 0 ? "+" : ""), stat), style);
+		GUILayout.Space(5);
 		GUILayout.EndHorizontal();
 	}
 
@@ -760,14 +948,16 @@ public class GUIControllerScript : MonoBehaviour {
 
 		GUILayout.BeginHorizontal(GUILayout.Height(25));
 
-		GUILayout.Space(15);
+		GUILayout.Space(10);
 		
 		GUILayout.Box("", weaponType, GUILayout.Width(30), GUILayout.Height(30));
-		GUILayout.Box(string.Format("{0}", name), "WeaponName");
-		GUILayout.Box(string.Format("{0}{1}", roll.count, roll.dieName), dieColor, GUILayout.Width(30), GUILayout.Height(30));
+		GUILayout.FlexibleSpace();
+		GUILayout.Box(string.Format("{0}", name), "ShortLabel", GUILayout.Width(180));
+		GUILayout.FlexibleSpace();
+		GUILayout.Box(string.Format("{0}{1}", roll.count, roll.dieName), "WeaponLevel", GUILayout.Width(30), GUILayout.Height(30));
 		//GUILayout.Box(string.Format("{0}", roll.count), dieColor, GUILayout.Width(30), GUILayout.Height(30));
 
-		GUILayout.Space(15);
+		GUILayout.Space(10);
 		
 		GUILayout.EndHorizontal();
 	}
@@ -786,10 +976,10 @@ public class GUIControllerScript : MonoBehaviour {
 		// Vertical column of modifiers
 		GUILayout.BeginVertical();
 
-		WeaponItemModifier("Lvl: ", weapon.level, "WeaponLevel");
-		WeaponItemModifier("Dmg: ", weapon.damageModifier, weapon.damageModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
-		WeaponItemModifier("Spd: ", weapon.speedModifier, weapon.speedModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier" );
-		WeaponItemModifier("Def: ", weapon.defenseModifier, weapon.defenseModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier");
+		WeaponItemModifier("Level: ", weapon.level, "WeaponLevel", false);
+		WeaponItemModifier("Damage: ", weapon.damageModifier, weapon.damageModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+		WeaponItemModifier("Speed: ", weapon.speedModifier, weapon.speedModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+		WeaponItemModifier("Defense: ", weapon.defenseModifier, weapon.defenseModifier > 0 ? "WeaponModifierNegative" : "WeaponModifier");
 
 		GUILayout.EndVertical();
 
@@ -812,8 +1002,9 @@ public class GUIControllerScript : MonoBehaviour {
 			attackCount++;
 			GUILayout.BeginHorizontal();
 
-			GUILayout.Box(attack.name, "WeaponActionName", GUILayout.Width(80));
+			GUILayout.Box(attack.name, "WeaponActionName", GUILayout.Width(100));
 			WeaponItemModifier("Hit: ", attack.hitModifier, attack.hitModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
+			GUILayout.Space(5);
 			WeaponItemModifier("Dmg: ", attack.damageModifier, attack.damageModifier < 0 ? "WeaponModifierNegative" : "WeaponModifier" );
 
 			GUILayout.EndHorizontal();
@@ -827,7 +1018,7 @@ public class GUIControllerScript : MonoBehaviour {
 	}
 
 	static float WEAPON_SELECT_ITEM_WIDTH = 210;
-	static float WEAPON_SELECT_ITEM_HEIGHT = 340;
+	static float WEAPON_SELECT_ITEM_HEIGHT = 350;
 
 	bool WeaponSelectItem(Weapon weapon, bool bSelectable=false)
 	{
@@ -909,6 +1100,80 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.FlexibleSpace();
 	}
 
+	void PlayerCard(Player player, bool bBossFightNextIndicator=false)
+	{
+		Rect lastRect;
+		
+		if(null == player)
+			return;
+		
+		/******/
+		GUILayout.BeginVertical(GUILayout.Width(WEAPON_SELECT_ITEM_WIDTH)
+		                        //, GUILayout.Height(WEAPON_SELECT_ITEM_HEIGHT)
+		                        );
+		
+		GUILayout.Space(10);
+		
+		GUILayout.BeginHorizontal(GUILayout.Height(25));
+		GUILayout.Space(15);
+		GUILayout.Box(string.Format("{0}", player.name), "ShortLabel");
+		GUILayout.Space(15);
+		GUILayout.EndHorizontal();
+		
+		GUILayout.Box("", "Divider");
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Space(25);
+		GUILayout.BeginVertical();
+		WeaponItemModifier("Level: ", player.level, "WeaponLevel", false);
+		WeaponItemModifier("XP: ", (int)player.xp, "WeaponLevel", false);
+		WeaponItemModifier("Spare Change: ", (int)player.change, "WeaponLevel", false);
+		WeaponItemModifier("Health: ", (int)player.health, "WeaponLevel", false);
+		WeaponItemModifier("Kills: ", player.kills, "WeaponLevel", false);
+		GUILayout.EndVertical();
+		GUILayout.Space(25);
+		GUILayout.EndHorizontal();
+		
+		GUILayout.Box("", "Divider");
+		
+		GUILayout.Box("Weapon", "WeaponActionTitle");
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Space(10);
+		GUILayout.BeginVertical();
+		GUILayout.Box("", "Divider");
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Box(player.weapon.name, "WeaponActionName", GUILayout.Width(80));
+
+		GUILayout.Box(string.Format("{0}{1}", player.weapon.roll.count, player.weapon.roll.dieName), "WeaponLevel", GUILayout.Width(30), GUILayout.Height(30));
+
+		WeaponItemModifier("Level: ", player.weapon.level, "WeaponLevel", false);
+
+		GUILayout.EndHorizontal();
+		
+		GUILayout.Box("", "Divider");
+
+		if((Utilities().PlayerIsAtBossFight(player)))
+			GUILayout.Box("Boss Fight Next Battle","ShortLabel");
+
+		GUILayout.EndVertical();
+		GUILayout.Space(10);
+		GUILayout.EndHorizontal();
+		
+		GUILayout.FlexibleSpace();
+
+		GUILayout.Space(10);
+		
+		GUILayout.EndVertical();
+		
+		lastRect = GUILayoutUtility.GetLastRect();
+		
+		GUI.Box(lastRect, "");
+	}
+
+
+
 	bool bStartedBattle = false;
 	void GUI_PlayerProfile(int windowID)
 	{
@@ -917,17 +1182,32 @@ public class GUIControllerScript : MonoBehaviour {
 		AddSpikes(windowRects["PlayerProfile"].width-80, true);
 
 		GUILayout.BeginVertical();
-
-		GUILayout.FlexibleSpace();
+		GUILayout.Space(10);
+		
+		GUILayout.Box("Profile", "SubTitleBox");
 
 		GUILayout.BeginHorizontal();
 
 		GUILayout.FlexibleSpace();
-		GUILayout.Box(string.Format("Name: {0}\nLevel: {1}\nXP: {2}\nChange: {3}\nKills: {4}",
-		                            player.name, player.level, player.xp, player.change, player.kills),
-		              GUILayout.MinWidth(400), GUILayout.MinHeight(340));
+
+		GUILayout.BeginVertical();
+		GUILayout.Space(10);
+		Instructions_Title("Player", "");
+		GUILayout.Space(10);
+		PlayerCard(player);
 		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+
+		GUILayout.FlexibleSpace();
+
+		GUILayout.BeginVertical();
+		GUILayout.Space(10);
+		Instructions_Title("Weapon", "");
+		GUILayout.Space(10);
 		WeaponSelectItem(player.weapon);
+		GUILayout.FlexibleSpace();
+		GUILayout.EndVertical();
+
 		GUILayout.FlexibleSpace();
 
 		GUILayout.EndHorizontal();
@@ -1247,65 +1527,59 @@ public class GUIControllerScript : MonoBehaviour {
 		}
 	}
 
-	int GUI_BattleMode_Window(int windowID)
-	{
-		if(true == bDoBattleWindow)
-		{
-			windowRects["ActionSelection"] = GUI.Window(windowID++, windowRects["ActionSelection"], GUI_BattleMode_actionSelection, "Actions");
-			windowRects["BattleText"] = GUI.Window(windowID++, windowRects["BattleText"], GUI_BattleMode_BattleText, "History");
-			//windowRects["BattleQueue"] = GUI.Window(windowID++, windowRects["BattleQueue"], GUI_BattleMode_BattleQueue, "Battle Queue");
-			windowRects["BattleStats"] = GUI.Window(windowID++, windowRects["BattleStats"], GUI_BattleMode_BattleStats, "Fighters");
-			windowRects["CurrentWeapon"] = GUI.Window(windowID++,windowRects["CurrentWeapon"], GUI_BattleMode_CurrentWeapon, "Current Weapon");
-		}
-		return windowID;
-	}
-
+	
 	List<Weapon> GetRandomWeaponOptions(int level, int count)
 	{
 		List<Weapon> allWeaponsForLevel = Utilities().getWeaponTypes(level);
 		List<Weapon> randomSelection = new List<Weapon>();
 
+		
 		for(int w=0; w < count; w++)
 		{
-			Weapon randomWeapon = allWeaponsForLevel[Random.Range(0,randomSelection.Count)];
+			int randomIndex = Random.Range(0, randomSelection.Count);
+			Weapon randomWeapon = allWeaponsForLevel[randomIndex];
 			randomSelection.Add(randomWeapon);
 			allWeaponsForLevel.Remove(randomWeapon);	// Don't show the same weapon more than once
 		}
-
+		
 		return randomSelection;
 	}
-
+	
 	Vector2 changeWeaponScroll = Vector3.zero;
 	bool bUpdatingWeapon = false;
-
+	
 	void GUI_BattleOver(int windowID)
 	{
-		Character playerCharacter = Utilities().getCurrentCharacter();
-
+		Player player = Utilities().getCurrentCharacter();
+		
 		AddSpikes(windowRects["BattleOver"].width-80, true);
-
+		
 		GUILayout.BeginVertical();
 		GUILayout.Space(10);
-
+		
 		GUILayout.Box("Battle Over", "SubTitleBox");
-
+		
 		GUILayout.BeginHorizontal();
 		GUILayout.Space(15);
-
+		
 		GUILayout.BeginVertical();
-
+		
 		GUILayout.Box(string.Format("{0} the victor",
-		                            (bPlayerIsVictorious ? playerCharacter.name + " is" : "The Enemy was")),
+		                            (bPlayerIsVictorious ? player.name + " is" : "The Enemy was")),
 		              "LegendaryText");
 
+		/*
 		GUILayout.Label(string.Format("Spare Change: {0}", playerCharacter.change), "LegendaryText");
 		GUILayout.Space(5);
 		GUILayout.Label(string.Format("Experience: {0}", playerCharacter.xp), "LegendaryText");
 		GUILayout.Space(5);
 		GUILayout.Label(string.Format("Kills: {0}", playerCharacter.kills), "LegendaryText");
+		*/
+
+		PlayerCard(player);
 
 		GUILayout.FlexibleSpace();
-
+		
 		if(true == bFinishedRewarding && !(bChangedWeapon && bUpdatingWeapon))
 		{
 			GUILayout.BeginHorizontal();
@@ -1322,11 +1596,11 @@ public class GUIControllerScript : MonoBehaviour {
 		
 		if(false == responseMessage.Equals(""))
 			GUILayout.Box(responseMessage, "LegendaryText");
-
+		
 		GUILayout.EndVertical();
-
+		
 		GUILayout.Space(15);
-
+		
 		if(true == bFinishedRewarding)
 		{
 			if(false == bChangedWeapon)
@@ -1336,12 +1610,12 @@ public class GUIControllerScript : MonoBehaviour {
 					randomWeaponChoices = GetRandomWeaponOptions(Utilities().getCurrentCharacter().level, 3);
 					bRandomWeaponChoicesSet = true;
 				}
-
+				
 				// Show possible weapon change options, here
 				GUILayout.BeginVertical();
-
+				
 				GUILayout.Label("Change Weapons?", GUILayout.Height(15));
-
+				
 				changeWeaponScroll = GUILayout.BeginScrollView(changeWeaponScroll);
 				GUILayout.BeginHorizontal();
 				foreach(Weapon weapon in randomWeaponChoices)
@@ -1352,16 +1626,16 @@ public class GUIControllerScript : MonoBehaviour {
 						bChangedWeapon = true;
 						bUpdatingWeapon = true;
 						bRandomWeaponChoicesSet = false;
-
-						playerCharacter.weapon = weapon;
-
-						Utilities().UpdatePlayer(playerCharacter.name, playerCharacter.change, playerCharacter.xp,
-						                         playerCharacter.kills, playerCharacter.level, playerCharacter.weapon.name);
+						
+						player.weapon = weapon;
+						
+						Utilities().UpdatePlayer(player.name, player.change, player.xp,
+						                         player.kills, player.level, player.weapon.name);
 					}
 				}
 				GUILayout.EndHorizontal();
 				GUILayout.EndScrollView();
-
+				
 				GUILayout.Space(15);
 				GUILayout.EndVertical();
 			}
@@ -1377,11 +1651,25 @@ public class GUIControllerScript : MonoBehaviour {
 			GUILayout.FlexibleSpace();
 		}
 		*/
-
+		
 		GUILayout.EndHorizontal();
-
+		
 		GUILayout.EndVertical();
 	}
+
+	int GUI_BattleMode_Window(int windowID)
+	{
+		if(true == bDoBattleWindow)
+		{
+			windowRects["ActionSelection"] = GUI.Window(windowID++, windowRects["ActionSelection"], GUI_BattleMode_actionSelection, "Actions");
+			windowRects["BattleText"] = GUI.Window(windowID++, windowRects["BattleText"], GUI_BattleMode_BattleText, "History");
+			//windowRects["BattleQueue"] = GUI.Window(windowID++, windowRects["BattleQueue"], GUI_BattleMode_BattleQueue, "Battle Queue");
+			windowRects["BattleStats"] = GUI.Window(windowID++, windowRects["BattleStats"], GUI_BattleMode_BattleStats, "Fighters");
+			windowRects["CurrentWeapon"] = GUI.Window(windowID++,windowRects["CurrentWeapon"], GUI_BattleMode_CurrentWeapon, "Current Weapon");
+		}
+		return windowID;
+	}
+
 
 	public void PlayerIsVictorious(float exp, float change, float kills)
 	{

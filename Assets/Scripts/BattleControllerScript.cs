@@ -69,9 +69,10 @@ public class BattleControllerScript : MonoBehaviour {
 	public class Player : BattleActor
 	{
 		private static int PLAYER_LEVEL_MAX = 200;
-		private static Dictionary<int, float> levelTable = new Dictionary<int, float>()
+		public static Dictionary<int, float> levelTable = new Dictionary<int, float>()
 		{
-			{1, 0},{2, 83},{3, 174},{4, 276},{5, 388},{6, 512},{7, 650},{8, 801},{9, 969},
+			{0, 0},
+			{1, 20},{2, 83},{3, 174},{4, 276},{5, 388},{6, 512},{7, 650},{8, 801},{9, 969},
 			{10, 1154},{11, 1358},{12, 1584},{13, 1833},{14, 2107},
 			{15, 2411},{16, 2746},{17, 3115},{18, 3523},{19, 3973},
 			{20, 4470},{21, 5018},{22, 5624},{23, 6291},{24, 7028},
@@ -347,12 +348,17 @@ public class BattleControllerScript : MonoBehaviour {
 		currentTurn.state = state;
 	}
 
-	void GenerateBattle(bool bBossFight=false, int numberOfEnemies=2)
+	public bool PlayerIsAtBossFight(Player player)
+	{
+		return (Player.levelTable[player.level] * 0.75) < player.xp;
+	}
+
+	void GenerateBattle(int numberOfEnemies=2)
 	{
 		List<BattleActor> opponents = new List<BattleActor>();
 		int numberOfEnemiesCreated = 0;
 
-		if(true == bBossFight)
+		if(PlayerIsAtBossFight(playerCharacter))
 		{
 			List<EnemyDefinition> possibleEnemies = Utilities().getBossPerLevel(playerCharacter.level);
 			opponents.Add(new Enemy(possibleEnemies[Random.Range(0, possibleEnemies.Count)]));
@@ -657,15 +663,15 @@ public class BattleControllerScript : MonoBehaviour {
 					// Create a "HIT" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-					v.x -= 0.15f;
+					v.x -= 0.5f;
+					v.y -= 0.5f;
+					DoBattleModText(actorHitModifier, v, hitTextColor);
+					v.x += 0.15f;
+					DoBattleModText(targetDefenseModifier, v, damageTextColor);
+					v.x += 0.15f;
+					v.y += 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
 
-					v.x += 0.5f;
-					v.y += 1;
-					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x -= 1f;
-					v.y += 1;
-					DoBattleModText(targetDefenseModifier, v, damageTextColor);
 					
 					// Describe the miss
 					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} + {2}'s Def:{3} = {4} ==> Hit!",
@@ -683,6 +689,13 @@ public class BattleControllerScript : MonoBehaviour {
 					// Create a "Miss" text
 					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
+					v.x -= 0.5f;
+					v.y -= 0.5f;
+					DoBattleModText(actorHitModifier, v, hitTextColor);
+					v.x += 0.15f;
+					DoBattleModText(targetDefenseModifier, v, damageTextColor);
+					v.x += 0.15f;
+					v.y += 0.15f;
 					Utilities().SpawnPts("Miss", v.x - 0.15f, v.y, missTextColor);
 
 					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} ==> Missed!",
@@ -710,13 +723,14 @@ public class BattleControllerScript : MonoBehaviour {
 
 				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-				v.x -= 0.25f;
+
+				v.x -= 0.5f;
+				v.y -= 0.5f;
 				Utilities().SpawnPts(rollValue.ToString(), v.x, v.y, damageTextColor);
-				v.x += 0.5f;
-				v.y += 1;
+				v.x += 0.15f;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
-				v.x -= 1f;
-				v.y += 1;
+				v.x += 0.15f;
+				v.y += 0.15f;
 				DoBattleModText(attackDamageMod, v, damageTextColor);
 
 				currentTurn.rolledDamage = Mathf.Max(1,damageAmount);

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -90,6 +90,8 @@ public class GameControllerScript : MonoBehaviour {
 		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, -4, 3));
 		metalShards.AddAttack(new Attack("Purse Punch", metalShards.roll, 3, -3));
 		weapons[weaponLevel].Add(metalShards.name, metalShards);
+
+
 		/////////////
 
 
@@ -271,6 +273,7 @@ public class GameControllerScript : MonoBehaviour {
 		Title,
 		Register,
 		Login,
+		Instructions,
 		WeaponSelection,
 		PlayerProfile,
 		BattleMode,

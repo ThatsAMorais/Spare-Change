@@ -115,6 +115,11 @@ public class UtilitiesScript : MonoBehaviour {
 		BattleController().BattleOverTest(bPlayerIsWinner);
 	}
 
+	public bool PlayerIsAtBossFight(Player player)
+	{
+		return BattleController().PlayerIsAtBossFight(player);
+	}
+
 	// -- Dice Controller
 
 	DiceControllerScript diceControllerScript;
