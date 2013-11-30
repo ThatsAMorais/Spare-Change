@@ -3,12 +3,12 @@ Spare Change
 =============
 Dice Fighting, Changing weapons, Collecting Spare Change,... all in a day's usual activities.
 
-![Title Screen](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_TitleScreen.png)
-![Player Profile](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_PlayerProfile.png)
-![Battle Mode](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_BattleMode_PlayerTurn.png)
-![Roll Chance To Hit](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_BattleMode_RollingChanceToHit.png)
-![Roll Damage](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_BattleMode_RollingDamage.png)
-![Battle Over](https://github.com/ThatsAMorais/game-off-2013/blob/master/Screenshots/SpareChange_BattleMode_BattleOver_WeaponChange.png)
+![Title Screen](http://sdrv.ms/1eKliIO)
+![Player Profile](http://sdrv.ms/1b4Jp48)
+![Battle Mode](http://sdrv.ms/1eKlwQ8)
+![Roll Chance To Hit](http://sdrv.ms/1c3XtI1)
+![Roll Damage](http://sdrv.ms/1eKlyYi)
+![Battle Over](http://sdrv.ms/1eKlLe1)
 
 =======
 ![GitHub Game Off Game Jam](https://f.cloud.github.com/assets/121322/1436486/25f88b78-4158-11e3-9b23-43596516362c.png)
