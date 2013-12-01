@@ -19,9 +19,11 @@ using Player = BattleControllerScript.Player;
 // -- Scoreoid
 using ScoreoidPlayer = ScoreoidInterface.ScoreoidPlayer;
 
-public class UtilitiesScript : MonoBehaviour {
+// -- GUI / BattleText
+using BattleTextEntry = GUIControllerScript.BattleTextEntry;
 
-
+public class UtilitiesScript : MonoBehaviour
+{
 	// -- Dice Box
 
 	GameObject diceBox;
@@ -217,7 +219,7 @@ public class UtilitiesScript : MonoBehaviour {
 
 	// -- GUI
 
-	public void AppendBattleText(string newBattleText)
+	public void AppendBattleText(BattleTextEntry newBattleText)
 	{
 		GUIController().AppendBattleText(newBattleText);
 	}

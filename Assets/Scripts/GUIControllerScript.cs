@@ -14,7 +14,6 @@ using Player = BattleControllerScript.Player;
 using ScoreoidPlayer = ScoreoidInterface.ScoreoidPlayer;
 using Roll = DiceControllerScript.Roll;
 
-
 public class GUIControllerScript : MonoBehaviour {
 
 
@@ -60,13 +59,196 @@ public class GUIControllerScript : MonoBehaviour {
 
 	GameState previousGameState;
 
-	public class BattleTextEntry
+	public abstract class BattleTextEntry
 	{
-		//Dictionary<
+		public static int SPACE = 5;
+		abstract public void Draw();
+		abstract public string PlainText();
 	}
 
-	string battleText;
+	public class SingleLineText : BattleTextEntry
+	{
+		string text;
+
+		public SingleLineText(string lineOfText)
+		{
+			text = lineOfText;
+		}
+
+		override public void Draw()
+		{
+			// "<text>"
+			GUILayout.Label(text, "PlainText");
+		}
+
+		override public string PlainText()
+		{
+			return text;
+		}
+	}
+
+	public class ChanceToHitText : BattleTextEntry
+	{
+		int rolledValue;
+		int hitMod;
+		int defenseMod;
+		bool bSuccess;
+		
+		public ChanceToHitText(int roll, int hitModif, int defMod, bool bSuccessful)
+		{
+			rolledValue = roll;
+			hitMod = hitModif;
+			defenseMod = defMod;
+			bSuccess = bSuccessful;
+		}
+		
+		override public void Draw()
+		{
+			GUILayout.BeginHorizontal();
+
+			// "Chance To Hit: <Hit!|Miss> :Roll: <rolledValue> :HitMod: <hitMod> :DefenseMod: <defenseMod>"
+			GUILayout.Label("Chance-To-Hit:", "PlainText");
+			GUILayout.Space(BattleTextEntry.SPACE);
+
+			if(true == bSuccess)
+				GUILayout.Label("Hit!", "WeaponModifier");
+			else
+				GUILayout.Label("Miss", "WeaponModifierNegative");
+
+			GUILayout.Space(BattleTextEntry.SPACE);
+
+			GUILayout.Label(":Roll:", "PlainText");
+			GUILayout.Label(rolledValue.ToString(),
+			                rolledValue > 10 ? "WeaponModifier" : "WeaponModifierNegative");
+			GUILayout.Space(BattleTextEntry.SPACE);
+
+			if(hitMod != 0)
+			{
+				GUILayout.Label(":Hit Mod:", "PlainText");
+				GUILayout.Label(hitMod.ToString(),
+				                hitMod > 0 ? "WeaponModifier" : "WeaponModifierNegative");
+				GUILayout.Space(BattleTextEntry.SPACE);
+			}
+
+			if(defenseMod != 0)
+			{
+				GUILayout.Label(":Target's Defense:", "PlainText");
+				GUILayout.Label(defenseMod.ToString(),
+				                defenseMod > 0 ? "WeaponModifier" : "WeaponModifierNegative");
+			}
+
+			GUILayout.EndHorizontal();
+		}
+
+		override public string PlainText()
+		{
+			return string.Format("Roll:{0} + Weapon:{1} + Def:{2} ==> {3}",
+			                     rolledValue, hitMod, defenseMod,
+			                     bSuccess == true ? "Hit!" : "Miss");
+		}
+	}
+
+	public class DamageText : BattleTextEntry
+	{
+		int rolledValue;
+		int weaponMod;
+		int attackMod;
+
+		public DamageText(int roll, int weapMod, int atkMod)
+		{
+			rolledValue = roll;
+			weaponMod = weapMod;
+			attackMod = atkMod;
+		}
+
+		override public void Draw()
+		{
+			GUILayout.BeginHorizontal();
+
+			// "Damage: <total> :Roll: <rolledValue> :WeaponMod: <weaponMod> :AttackMod: <attackMod>"
+			GUILayout.Label("Damage:", "PlainText");
+			GUILayout.Space(BattleTextEntry.SPACE);
+			GUILayout.Label((rolledValue + weaponMod + attackMod).ToString(), "WeaponModifierNegative");
+			GUILayout.Space(BattleTextEntry.SPACE);
+
+			GUILayout.Label(":Roll:", "PlainText");
+			GUILayout.Label(rolledValue.ToString(), "WeaponModifier");
+			GUILayout.Space(BattleTextEntry.SPACE);
+
+			if(0 != weaponMod)
+			{
+				GUILayout.Label(":Weapon Mod:", "PlainText");
+				GUILayout.Label(weaponMod.ToString(),
+				                weaponMod > 0 ? "WeaponModifier" : "WeaponModifierNegative");
+				GUILayout.Space(BattleTextEntry.SPACE);
+			}
+
+			if(0 != attackMod)
+			{
+				GUILayout.Label(":Attack Mod:", "PlainText");
+				GUILayout.Label(attackMod.ToString(),
+				                attackMod > 0 ? "WeaponModifier" : "WeaponModifierNegative");
+			}
+
+			GUILayout.EndHorizontal();
+		}
+
+		override public string PlainText()
+		{
+			string battleTextString = string.Format("roll:{0}", rolledValue);
+
+			if(0 != weaponMod)
+				battleTextString += string.Concat(string.Format(" weapon-modifier:{0}", weaponMod));
+			
+			if(0 != attackMod)
+				battleTextString += string.Concat(string.Format(" attack-modifier:{0}", attackMod));
+
+			return string.Format("{0} => {1} dealt", battleTextString, rolledValue+weaponMod+attackMod);
+		}
+	}
+
+	public class SelectedActionText : BattleTextEntry
+	{
+		string actor;
+		string selectedAction;
+		string targetedActor;
+		
+		public SelectedActionText(string turnActor, string action, string target)
+		{
+			actor = turnActor;
+			selectedAction = action;
+			targetedActor = target;
+		}
+		
+		override public void Draw()
+		{
+			GUILayout.BeginHorizontal();
+
+			// "<actor> uses <selectedAction> on <targetedActor>"
+			GUILayout.Label(actor, "ShortLabel");
+			GUILayout.Space(BattleTextEntry.SPACE);
+			GUILayout.Label("uses", "PlainText");
+			GUILayout.Space(BattleTextEntry.SPACE);
+			GUILayout.Label(selectedAction, "WeaponActionTitle");
+			GUILayout.Space(BattleTextEntry.SPACE);
+			GUILayout.Label("on", "PlainText");
+			GUILayout.Label(targetedActor, "ShortLabel");
+			
+			GUILayout.EndHorizontal();
+		}
+
+		override public string PlainText()
+		{
+			return string.Format("{0} uses {1} on {2}",
+			                     actor,
+			                     selectedAction,
+			                     targetedActor);
+		}
+	}
+
+	//string battleText;
 	Vector2 scrollPosition;
+	List<BattleTextEntry> battleTextEntries;
 
 	string characterNameInput;
 	string emailInput;
@@ -151,7 +333,7 @@ public class GUIControllerScript : MonoBehaviour {
 		diceIcons.Add("d20",d20Icon);
 		diceIcons.Add("d100",d100Icon);
 
-		battleText = "";
+		//battleText = "";
 		characterNameInput = "";
 		emailInput = "";
 		passwordInput = "";
@@ -1374,9 +1556,14 @@ public class GUIControllerScript : MonoBehaviour {
 
 		scrollPosition = GUILayout.BeginScrollView(scrollPosition);
 
-		//foreach()
-		// TODO: Loop over the BattleText elements
-		GUILayout.Label(string.Format("{0}", battleText), "PlainText");
+		// This is the oldschool way
+		//GUILayout.Label(string.Format("{0}", battleText), "PlainText");
+
+		// Loop over the BattleText elements
+		foreach(BattleTextEntry text in battleTextEntries)
+		{
+			text.Draw();
+		}
 
 		GUILayout.EndScrollView();
 
@@ -1708,13 +1895,19 @@ public class GUIControllerScript : MonoBehaviour {
 		bUpdatingWeapon = false;
 	}
 
-
-	public void AppendBattleText(string battleTextString)
+	public void AppendBattleText(BattleTextEntry newEntry)
 	{
+		/*
 		//TODO: Could be good to add other decorations to the string
 		battleText += string.Format("\n{0}", battleTextString);
-
 		scrollPosition.y = Mathf.Infinity;
+		*/
+		if(null == battleTextEntries)
+			battleTextEntries = new List<BattleTextEntry>();
+
+		battleTextEntries.Add(newEntry);
+
+		scrollPosition = new Vector2(0, Mathf.Infinity);
 	}
 
 

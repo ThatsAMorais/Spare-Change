@@ -7,8 +7,11 @@ using EnemyDefinition = GameControllerScript.EnemyDefinition;
 using BattleAction = GameControllerScript.BattleAction;
 using Attack = GameControllerScript.Attack;
 using Weapon = GameControllerScript.Weapon;
-
 using Roll = DiceControllerScript.Roll;
+using DamageText = GUIControllerScript.DamageText;
+using ChanceToHitText = GUIControllerScript.ChanceToHitText;
+using SingleLineText = GUIControllerScript.SingleLineText;
+using SelectedActionText = GUIControllerScript.SelectedActionText;
 
 public class BattleControllerScript : MonoBehaviour {
 
@@ -438,12 +441,12 @@ public class BattleControllerScript : MonoBehaviour {
 		// Initialize the battleQueue
 		InitializeQueue();
 		
-		Utilities().AppendBattleText(string.Format("{0} is engaged by some thugs...", playerCharacter.name));
+		Utilities().AppendBattleText(new SingleLineText(string.Format("{0} is engaged by some thugs...", playerCharacter.name)));
 		foreach(Enemy enemy in enemies)
 		{
-			Utilities().AppendBattleText(string.Format("\t{0}", enemy.name));
+			Utilities().AppendBattleText(new SingleLineText(string.Format("\t{0}", enemy.name)));
 		}
-		Utilities().AppendBattleText("Beat'em and make some ~change~!");
+		Utilities().AppendBattleText(new SingleLineText("Beat'em and make some ~change~!"));
 		
 	}
 
@@ -520,7 +523,7 @@ public class BattleControllerScript : MonoBehaviour {
 			CalculateTurn();
 		}
 		
-		Utilities().AppendBattleText(string.Format("--------- {0}'s turn,--------", currentTurn.actor.name));
+		Utilities().AppendBattleText(new SingleLineText(string.Format("--------- {0}'s turn,--------", currentTurn.actor.name)));
 		
 		if(!currentTurn.bIsPlayer)
 		{
@@ -570,7 +573,7 @@ public class BattleControllerScript : MonoBehaviour {
 		List<Attack> actions = new List<Attack>(currentTurn.actor.getActions());
 		SelectedAction(actions[Random.Range(0,currentTurn.actor.getActions().Count)]);
 		SelectedEnemy(playerCharacter);
-		Utilities().AppendBattleText("Enemy Attacking");
+		Utilities().AppendBattleText(new SingleLineText("Enemy Attacking"));
 		BattleActorActed();
 	}
 	
@@ -596,11 +599,10 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		currentTurn.targetedActor = actor;
 		currentTurn.state = BattleRound.State.Act;
-		
-		Utilities().AppendBattleText(string.Format("{0} uses {1} on {2}",
-						currentTurn.actor.name,
-						currentTurn.selectedAction.name,
-						currentTurn.targetedActor.name));
+
+		Utilities().AppendBattleText(new SelectedActionText(currentTurn.actor.name,
+		                                                    currentTurn.selectedAction.name,
+		                                                    currentTurn.targetedActor.name));
 		
 		BattleActorActed();
 	}
@@ -618,7 +620,6 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 		else
 		{
-			diceDamageReportCount = 0;
 			roll = currentTurn.selectedAction.roll;
 		}
 
@@ -627,7 +628,6 @@ public class BattleControllerScript : MonoBehaviour {
 
 		Utilities().TransitionBattleWindowsOff();
 
-		//Utilities().AppendBattleText(string.Format("Rolling {0} for {1}", roll.dieName, (true == currentTurn.bRolledChanceToHit ? "Damage" : "Chance to Hit" )));
 		Utilities().ThrowDice(roll, true);
 	}
 
@@ -636,9 +636,6 @@ public class BattleControllerScript : MonoBehaviour {
 	{
 		bThrowDamageRoll = true;
 	}
-
-	Vector3 v;
-	int diceDamageReportCount = 0;
 
 	/// <summary>
 	/// Dices the rolled.
@@ -655,7 +652,7 @@ public class BattleControllerScript : MonoBehaviour {
 
 		if(Utilities().getGameState() != GameState.BattleMode)
 		{
-			v = Camera.main.WorldToViewportPoint(die.transform.position);
+			Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
 			Utilities().SpawnPts(string.Format("{0}", rollValue), v.x, v.y, hitTextColor);
 			return;
 		}
@@ -674,31 +671,32 @@ public class BattleControllerScript : MonoBehaviour {
 				int actorHitModifier = currentTurn.selectedAction.hitModifier;
 				int targetDefenseModifier = currentTurn.targetedActor.getDefense();
 				int hitValue = rollValue  + actorHitModifier + targetDefenseModifier;
+				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+
+				// Draw the modifier floating text if necessary
+				if(0 != actorHitModifier)
+				{
+					v.x -= 0.5f;
+					v.y -= 0.5f;
+					DoBattleModText(actorHitModifier, v, hitTextColor);
+				}
+				if(0 != targetDefenseModifier)
+				{
+					v.x += 0.35f;
+					DoBattleModText(targetDefenseModifier, v, damageTextColor);
+				}
+
 				// Check if the rolled value was enough to hit the target (factoring in the action's hit modifier)
 				if(hitValue >= 10)
 				{
-					// Create a "HIT" text
-					v = Camera.main.WorldToViewportPoint(die.transform.position);
-
-					if(0 != actorHitModifier)
-					{
-						v.x -= 0.5f;
-						v.y -= 0.5f;
-						DoBattleModText(actorHitModifier, v, hitTextColor);
-					}
-					if(0 != targetDefenseModifier)
-					{
-						v.x += 0.35f;
-						DoBattleModText(targetDefenseModifier, v, damageTextColor);
-					}
 					v.x += 0.25f;
 					v.y += 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
 
 					
-					// Describe the miss
-					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} + {2}'s Def:{3} = {4} ==> Hit!",
-					                             rollValue, actorHitModifier, currentTurn.targetedActor.name, targetDefenseModifier, hitValue));
+					// Describe the Hit
+					Utilities().AppendBattleText(new ChanceToHitText(rollValue, actorHitModifier,
+					                                                 targetDefenseModifier, true));
 
 					// Hit was successful, roll for damage
 					currentTurn.bChanceToHitSuccess = true;
@@ -709,27 +707,14 @@ public class BattleControllerScript : MonoBehaviour {
 				}
 				else
 				{
-					// Create a "Miss" text
-					v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-					if(0 != actorHitModifier)
-					{
-						v.x -= 0.5f;
-						v.y -= 0.5f;
-						DoBattleModText(actorHitModifier, v, hitTextColor);
-					}
-					if(0 != targetDefenseModifier)
-					{
-						v.x += 0.35f;
-						DoBattleModText(targetDefenseModifier, v, damageTextColor);
-					}
 
 					v.x += 0.15f;
 					v.y += 0.15f;
 					Utilities().SpawnPts("Miss", v.x, v.y, missTextColor);
 
-					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} ==> Missed!",
-					                                           rollValue, actorHitModifier, targetDefenseModifier));
+					Utilities().AppendBattleText(new ChanceToHitText(rollValue, actorHitModifier,
+					                                                 targetDefenseModifier, false));
 
 					// Hit was unsuccessful, end turn
 					FinishTurn();
@@ -741,15 +726,10 @@ public class BattleControllerScript : MonoBehaviour {
 				int damageAmount = rollValue;
 				int weaponDamageMod = currentTurn.actor.weapon.damageModifier;
 				int attackDamageMod = (currentTurn.selectedAction as Attack).damageModifier;
-				string battleTextstring = string.Format("roll:{0}", rollValue);
+				Vector3 v = Vector3.zero;
 
 				damageAmount += weaponDamageMod;
-				if(0 < weaponDamageMod)
-					battleTextstring += string.Concat(string.Format(" weapon-modifier:{0}", weaponDamageMod));
-
 				damageAmount += attackDamageMod;
-				if(0 < attackDamageMod)
-					battleTextstring += string.Concat(string.Format(" attack-modifier:{0}", attackDamageMod));
 
 				v.x = 0.5f;
 				v.y = 0.5f;
@@ -762,16 +742,13 @@ public class BattleControllerScript : MonoBehaviour {
 
 				currentTurn.rolledDamage = Mathf.Max(1,damageAmount);
 
-				Utilities().AppendBattleText(string.Format("{0} => {1}  dealt to {2}",
-				                                          	battleTextstring, currentTurn.rolledDamage, currentTurn.targetedActor.name));
+				Utilities().AppendBattleText(new DamageText(rollValue, weaponDamageMod, attackDamageMod));
 
 				if(0 == currentTurn.numberOfDamageDiceStillRolling)
 				{
 					currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
 					FinishTurn();
 				}
-
-				diceDamageReportCount++;
 			}
 		}
 	}
@@ -860,7 +837,7 @@ public class BattleControllerScript : MonoBehaviour {
 			Utilities().EnemyIsVictorious();
 		}
 
-		Utilities().AppendBattleText(string.Format("----------------{0}----------------", battleOverText));
+		Utilities().AppendBattleText(new SingleLineText(string.Format("----------------{0}----------------", battleOverText)));
 
 		Utilities().setGameState(GameState.BattleOver);
 
