@@ -3,6 +3,13 @@ Spare Change
 =============
 Dice Fighting, Changing weapons, Collecting Spare Change,... all in a day's usual activities.
 
+![Title Screen](Screenshots/SpareChange_TitleScreen.png)
+![Player Profile](Screenshots/SpareChange_PlayerProfile.png)
+![Battle Mode](Screenshots/SpareChange_BattleMode_PlayerTurn.png)
+![Roll Chance To Hit](Screenshots/SpareChange_BattleMode_RollingChanceToHit.png)
+![Roll Damage](Screenshots/SpareChange_BattleMode_RollingDamage.png)
+![Battle Over](Screenshots/SpareChange_BattleMode_BattleOver_WeaponChange.png)
+
 =======
 ![GitHub Game Off Game Jam](https://f.cloud.github.com/assets/121322/1436486/25f88b78-4158-11e3-9b23-43596516362c.png)
 
