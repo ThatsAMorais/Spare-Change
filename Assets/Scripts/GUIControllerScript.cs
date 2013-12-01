@@ -1725,8 +1725,8 @@ public class GUIControllerScript : MonoBehaviour {
 	    y = Mathf.Clamp(y, 0.05f, 0.9f);  // the string will be visible
 		*/
 
-		x = Mathf.Clamp(x, 0.25f, 0.85f); // clamp position to screen to ensure
-		y = Mathf.Clamp(y, 0.5f, 0.95f);  // the string will be visible
+		x = Mathf.Clamp(x, 0.05f, 0.85f); // clamp position to screen to ensure
+		y = Mathf.Clamp(y, 0.05f, 0.95f);  // the string will be visible
 
 	    GUIText gui = Instantiate(BattleTextPrefab, new Vector3(x,y,0), Quaternion.identity) as GUIText;
 

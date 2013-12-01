@@ -618,6 +618,7 @@ public class BattleControllerScript : MonoBehaviour {
 		}
 		else
 		{
+			diceDamageReportCount = 0;
 			roll = currentTurn.selectedAction.roll;
 		}
 
@@ -637,6 +638,7 @@ public class BattleControllerScript : MonoBehaviour {
 	}
 
 	Vector3 v;
+	int diceDamageReportCount = 0;
 
 	/// <summary>
 	/// Dices the rolled.
@@ -678,11 +680,17 @@ public class BattleControllerScript : MonoBehaviour {
 					// Create a "HIT" text
 					v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-					v.x -= 0.5f;
-					v.y -= 0.5f;
-					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x += 0.35f;
-					DoBattleModText(targetDefenseModifier, v, damageTextColor);
+					if(0 != actorHitModifier)
+					{
+						v.x -= 0.5f;
+						v.y -= 0.5f;
+						DoBattleModText(actorHitModifier, v, hitTextColor);
+					}
+					if(0 != targetDefenseModifier)
+					{
+						v.x += 0.35f;
+						DoBattleModText(targetDefenseModifier, v, damageTextColor);
+					}
 					v.x += 0.25f;
 					v.y += 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
@@ -702,14 +710,21 @@ public class BattleControllerScript : MonoBehaviour {
 				else
 				{
 					// Create a "Miss" text
-					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+					v = Camera.main.WorldToViewportPoint(die.transform.position);
 
-					v.x -= 0.5f;
-					v.y -= 0.5f;
-					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x += 0.35f;
-					DoBattleModText(targetDefenseModifier, v, damageTextColor);
-					v.x += 0.25f;
+					if(0 != actorHitModifier)
+					{
+						v.x -= 0.5f;
+						v.y -= 0.5f;
+						DoBattleModText(actorHitModifier, v, hitTextColor);
+					}
+					if(0 != targetDefenseModifier)
+					{
+						v.x += 0.35f;
+						DoBattleModText(targetDefenseModifier, v, damageTextColor);
+					}
+
+					v.x += 0.15f;
 					v.y += 0.15f;
 					Utilities().SpawnPts("Miss", v.x, v.y, missTextColor);
 
@@ -736,11 +751,8 @@ public class BattleControllerScript : MonoBehaviour {
 				if(0 < attackDamageMod)
 					battleTextstring += string.Concat(string.Format(" attack-modifier:{0}", attackDamageMod));
 
-				Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
-
-
-				v.x -= 0.5f;
-				v.y -= 0.5f;
+				v.x = 0.5f;
+				v.y = 0.5f;
 				Utilities().SpawnPts(rollValue.ToString(), v.x, v.y, damageTextColor);
 				v.x += 0.35f;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
@@ -758,6 +770,8 @@ public class BattleControllerScript : MonoBehaviour {
 					currentTurn.targetedActor.addDamage(currentTurn.rolledDamage);
 					FinishTurn();
 				}
+
+				diceDamageReportCount++;
 			}
 		}
 	}

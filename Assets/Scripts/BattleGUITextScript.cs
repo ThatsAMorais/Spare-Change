@@ -5,7 +5,8 @@ public class BattleGUITextScript : MonoBehaviour {
 	
 	public float scroll = 0.05f;  // scrolling velocity
 	public float duration = 1.5f; // time to die
-	public float alpha;
+	public float alpha = 1;
+	public int direction = 1;
 	
 	// Use this for initialization
 	void Awake ()
@@ -19,9 +20,9 @@ public class BattleGUITextScript : MonoBehaviour {
 	{
 	    if(alpha>0)
 		{
-			transform.position = new Vector3(transform.position.x,
+			transform.position = new Vector3(transform.position.x + scroll*Time.deltaTime*direction*0.5f,
 											transform.position.y + scroll*Time.deltaTime,
-											transform.position.z);
+											transform.position.z + scroll*Time.deltaTime*0.5f);
 			alpha -= Time.deltaTime/duration;
 			guiText.material.color = new Color(guiText.material.color.r,
 												guiText.material.color.g,
@@ -36,6 +37,7 @@ public class BattleGUITextScript : MonoBehaviour {
 	
 	public void SetColor(Color newColor)
 	{
+		direction = (1 == Random.Range(0,2) ? -1 : 1);
 		guiText.material.color = newColor; // set text color
 	}
 }
