@@ -60,6 +60,11 @@ public class GUIControllerScript : MonoBehaviour {
 
 	GameState previousGameState;
 
+	public class BattleTextEntry
+	{
+		//Dictionary<
+	}
+
 	string battleText;
 	Vector2 scrollPosition;
 
@@ -314,8 +319,15 @@ public class GUIControllerScript : MonoBehaviour {
 			case GameState.BattleOver:
 				windowRects["BattleOver"] = new Rect(offScreenRects[Direction.Right]);
 				TransitionBattleWindowsOff();
+				FadeWindows(true);
+				bDoBattleWindow = false;
 				bThrowingDice = true;
 				bDoBattleOverWindow = true;
+				
+				bFinishedRewarding = false;
+				bChangedWeapon = false;
+				bUpdatingWeapon = false;
+				bRandomWeaponChoicesSet = false;
 				break;
 			}
 			
@@ -544,19 +556,19 @@ public class GUIControllerScript : MonoBehaviour {
 
 	public void TransitionBattleWindowsOff()
 	{
-		bTransitioningBattleWindowsOn = false;
-		bTransitioningBattleWindows = true;
-		bFadeWindows = true;
+		if(Utilities().getGameState().Equals(GameState.BattleMode))
+		{
+			bTransitioningBattleWindowsOn = false;
+			bTransitioningBattleWindows = true;
+			bFadeWindows = true;
+		}
 	}
 
 	public void TransitionBattleWindowsOn()
 	{
-		if(Utilities().getGameState().Equals(GameState.BattleMode))
-		{
-			bTransitioningBattleWindowsOn = true;
-			bTransitioningBattleWindows = true;
-			bFadeWindows = false;
-		}
+		bTransitioningBattleWindowsOn = true;
+		bTransitioningBattleWindows = true;
+		bFadeWindows = false;
 	}
 
 	static float MINIMUM_OPACITY = .4f;
@@ -746,6 +758,8 @@ public class GUIControllerScript : MonoBehaviour {
 			SubmitInput();
 		}
 
+		GUILayout.Space (30);
+
 		GUILayout.BeginHorizontal();	// | #Submit# <---> "message" <---> #Back# |
 		if(GUILayout.Button("Back"))
 		{
@@ -865,7 +879,7 @@ public class GUIControllerScript : MonoBehaviour {
 		
 		GUILayout.BeginVertical();
 		Weapon bat = Utilities().getWeapon("Bat");
-		Player samplePlayer = new Player("Chu-chu-chuck Changes", bat, 1, 25, 10, 6 );
+		Player samplePlayer = new Player("Chu-chu-chuck Changes", bat, 25, 10, 6);
 		PlayerCard(samplePlayer, true);
 		GUILayout.FlexibleSpace();
 		GUILayout.EndVertical();
@@ -1080,7 +1094,7 @@ public class GUIControllerScript : MonoBehaviour {
 		weaponSelectScrollview = GUILayout.BeginScrollView(weaponSelectScrollview);
 
 		GUILayout.BeginHorizontal();
-		foreach(Weapon weaponType in Utilities().getWeaponTypes(1))
+		foreach(Weapon weaponType in Utilities().getWeaponTypes(0))
 		{
 			bool selected = WeaponSelectItem(weaponType, true);
 			if(selected)
@@ -1144,7 +1158,7 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.Box("", "Divider");
 
 		GUILayout.BeginHorizontal();
-		GUILayout.Box(player.weapon.name, "WeaponActionName", GUILayout.Width(80));
+		GUILayout.Box(player.weapon.name, "WeaponActionName", GUILayout.Width(90));
 
 		GUILayout.Box(string.Format("{0}{1}", player.weapon.roll.count, player.weapon.roll.dieName), "WeaponLevel", GUILayout.Width(30), GUILayout.Height(30));
 
@@ -1359,7 +1373,11 @@ public class GUIControllerScript : MonoBehaviour {
 		GUILayout.BeginHorizontal();
 
 		scrollPosition = GUILayout.BeginScrollView(scrollPosition);
+
+		//foreach()
+		// TODO: Loop over the BattleText elements
 		GUILayout.Label(string.Format("{0}", battleText), "PlainText");
+
 		GUILayout.EndScrollView();
 
 		GUILayout.EndHorizontal();
@@ -1533,8 +1551,7 @@ public class GUIControllerScript : MonoBehaviour {
 		List<Weapon> allWeaponsForLevel = Utilities().getWeaponTypes(level);
 		List<Weapon> randomSelection = new List<Weapon>();
 
-		
-		for(int w=0; w < count; w++)
+		for(int w=0; w < count && 0 < allWeaponsForLevel.Count; w++)
 		{
 			int randomIndex = Random.Range(0, randomSelection.Count);
 			Weapon randomWeapon = allWeaponsForLevel[randomIndex];
@@ -1547,7 +1564,7 @@ public class GUIControllerScript : MonoBehaviour {
 	
 	Vector2 changeWeaponScroll = Vector3.zero;
 	bool bUpdatingWeapon = false;
-	
+
 	void GUI_BattleOver(int windowID)
 	{
 		Player player = Utilities().getCurrentCharacter();
@@ -1614,7 +1631,7 @@ public class GUIControllerScript : MonoBehaviour {
 				// Show possible weapon change options, here
 				GUILayout.BeginVertical();
 				
-				GUILayout.Label("Change Weapons?", GUILayout.Height(15));
+				GUILayout.Label("Change Weapons?", "LegendaryText", GUILayout.Height(55));
 				
 				changeWeaponScroll = GUILayout.BeginScrollView(changeWeaponScroll);
 				GUILayout.BeginHorizontal();
@@ -1708,8 +1725,8 @@ public class GUIControllerScript : MonoBehaviour {
 	    y = Mathf.Clamp(y, 0.05f, 0.9f);  // the string will be visible
 		*/
 
-		x = Mathf.Clamp(x, 0.35f, 0.75f); // clamp position to screen to ensure
-		y = Mathf.Clamp(y, 0.35f, 0.7f);  // the string will be visible
+		x = Mathf.Clamp(x, 0.25f, 0.85f); // clamp position to screen to ensure
+		y = Mathf.Clamp(y, 0.5f, 0.95f);  // the string will be visible
 
 	    GUIText gui = Instantiate(BattleTextPrefab, new Vector3(x,y,0), Quaternion.identity) as GUIText;
 

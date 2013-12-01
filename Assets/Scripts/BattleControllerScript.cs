@@ -120,16 +120,31 @@ public class BattleControllerScript : MonoBehaviour {
 		public int kills {get;set;}
 		public bool bLeveledUp {get;set;}
 
-		public Player(string playerName, Weapon playerWeapon, float playerXp, int playerLevel, float playerChange, int playerKills)
+		public Player(string playerName, Weapon playerWeapon, float playerXp, float playerChange, int playerKills)
 			: base(playerName, playerWeapon)
 		{
 			name = playerName;
 			xp = playerXp;
-			level = playerLevel;
+
+			level = Player.CalculateLevel(xp);
+
 			change = playerChange;
 			kills = playerKills;
 			health = 30 * (int)(1 + level*0.1f);
 			remainingHealth = health;
+		}
+
+		public static int CalculateLevel(float exp)
+		{
+			int currentLevel = 0;
+
+			// Calculate current level
+			while((PLAYER_LEVEL_MAX > currentLevel) && (exp >= levelTable[currentLevel+1]))
+			{
+				currentLevel++;
+			}
+
+			return currentLevel;
 		}
 
 		public void AddChange(float amountOfChange)
@@ -142,10 +157,7 @@ public class BattleControllerScript : MonoBehaviour {
 			if(xp < levelTable[PLAYER_LEVEL_MAX])
 			{
 				xp = Mathf.Min(xp + amountOfExp, levelTable[PLAYER_LEVEL_MAX]);
-
-				// Calculate current level
-				if((PLAYER_LEVEL_MAX > level) && (xp >= levelTable[level+1]))
-					level++;
+				level = Player.CalculateLevel(xp);
 			}
 		}
 
@@ -368,14 +380,15 @@ public class BattleControllerScript : MonoBehaviour {
 			List<EnemyDefinition> possibleEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
 
 			/*
-			// Easy-fight test code
-			List<EnemyDefinition> possibleEnemies = new List<EnemyDefinition>();
-			List<EnemyDefinition> allEnemies = Utilities().getEnemiesPerLevel(playerCharacter.level);
-
-			foreach(EnemyDefinition enemyDef in allEnemies)
+			// HACK code for an Easy Fight that should be left commented out, unless in use
+			foreach(EnemyDefinition enemyDef in possibleEnemies)
 			{
 				if(enemyDef.name == "Bunny")
-					possibleEnemies.Add(enemyDef);
+				{
+					opponents.Add(new Enemy(enemyDef));
+					enemies = opponents;
+					return;
+				}
 			}
 			*/
 
@@ -623,6 +636,8 @@ public class BattleControllerScript : MonoBehaviour {
 		bThrowDamageRoll = true;
 	}
 
+	Vector3 v;
+
 	/// <summary>
 	/// Dices the rolled.
 	/// </summary>
@@ -638,7 +653,7 @@ public class BattleControllerScript : MonoBehaviour {
 
 		if(Utilities().getGameState() != GameState.BattleMode)
 		{
-			Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+			v = Camera.main.WorldToViewportPoint(die.transform.position);
 			Utilities().SpawnPts(string.Format("{0}", rollValue), v.x, v.y, hitTextColor);
 			return;
 		}
@@ -661,14 +676,14 @@ public class BattleControllerScript : MonoBehaviour {
 				if(hitValue >= 10)
 				{
 					// Create a "HIT" text
-					Vector3 v = Camera.main.WorldToViewportPoint(die.transform.position);
+					v = Camera.main.WorldToViewportPoint(die.transform.position);
 
 					v.x -= 0.5f;
 					v.y -= 0.5f;
 					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x += 0.15f;
+					v.x += 0.35f;
 					DoBattleModText(targetDefenseModifier, v, damageTextColor);
-					v.x += 0.15f;
+					v.x += 0.25f;
 					v.y += 0.15f;
 					Utilities().SpawnPts("Hit", v.x, v.y, hitTextColor);
 
@@ -692,11 +707,11 @@ public class BattleControllerScript : MonoBehaviour {
 					v.x -= 0.5f;
 					v.y -= 0.5f;
 					DoBattleModText(actorHitModifier, v, hitTextColor);
-					v.x += 0.15f;
+					v.x += 0.35f;
 					DoBattleModText(targetDefenseModifier, v, damageTextColor);
-					v.x += 0.15f;
+					v.x += 0.25f;
 					v.y += 0.15f;
-					Utilities().SpawnPts("Miss", v.x - 0.15f, v.y, missTextColor);
+					Utilities().SpawnPts("Miss", v.x, v.y, missTextColor);
 
 					Utilities().AppendBattleText(string.Format("Roll:{0} + Weapon:{1} - Target-Def:{2} ==> Missed!",
 					                                           rollValue, actorHitModifier, targetDefenseModifier));
@@ -727,9 +742,9 @@ public class BattleControllerScript : MonoBehaviour {
 				v.x -= 0.5f;
 				v.y -= 0.5f;
 				Utilities().SpawnPts(rollValue.ToString(), v.x, v.y, damageTextColor);
-				v.x += 0.15f;
+				v.x += 0.35f;
 				DoBattleModText(weaponDamageMod, v, damageTextColor);
-				v.x += 0.15f;
+				v.x += 0.2f;
 				v.y += 0.15f;
 				DoBattleModText(attackDamageMod, v, damageTextColor);
 

@@ -9,7 +9,6 @@ using ScoreoidPlayer = ScoreoidInterface.ScoreoidPlayer;
 public class GameControllerScript : MonoBehaviour {
 
 	// -- Privates
-
 	GameState gameState;
 	Player currentCharacter;
 
@@ -30,119 +29,184 @@ public class GameControllerScript : MonoBehaviour {
 	{
 	}
 
+	void NewWeapon(string theName, Weapon.Type theType,
+	               int dmgMod, int spdMod, int defMod,
+	               int weaponLevel, Roll weaponRoll,
+	               params Attack[] attacks)
+	{
+		Weapon weapon;
+
+		// Don't create a weapon that doesn't have any attacks
+		if(null == attacks || 0 == attacks.Length)
+			return;
+
+		weapon = new Weapon(theName, theType, dmgMod, spdMod, defMod, weaponLevel, weaponRoll);
+		
+		// Add the attacks to the weapon
+		foreach(Attack attack in attacks)
+		{
+			attack.roll = weaponRoll;
+			weapon.AddAttack(attack);
+		}
+
+		// Ensure the weapons Dict is allocated
+		if(null == weapons)
+			weapons = new Dictionary<int, Dictionary<string, Weapon>>();
+
+		// Ensure the specified level in 'weapons' is allocated
+		if(false == weapons.ContainsKey(weaponLevel))
+			weapons[weaponLevel] = new Dictionary<string, Weapon>();
+
+		// Add the weapon
+		weapons[weaponLevel].Add(weapon.name, weapon);
+	}
+
+	void NewEnemy(string enemyName, Weapon enemyWeapon,
+	              float enemyExpValue, float enemyChangeValue,
+	              int enemyHealth, int enemySpeed, int enemyDefense,
+	              int enemyLevel, bool bBoss=false)
+	{
+		EnemyDefinition enemy;
+
+		if(null == enemyWeapon)
+			return;
+		
+		enemy = new EnemyDefinition(enemyName, enemyWeapon,
+		                            enemyExpValue, enemyChangeValue,
+		                            enemyHealth, enemySpeed, enemyDefense,
+		                            enemyLevel);
+
+		if(true == bBoss)
+		{
+			if(null == bosses)
+				bosses = new Dictionary<int, Dictionary<string, EnemyDefinition>>();
+
+			if(false == bosses.ContainsKey(enemyLevel))
+				bosses[enemyLevel] = new Dictionary<string, EnemyDefinition>();
+
+			bosses[enemyLevel].Add(enemy.name, enemy);
+		}
+		else
+		{
+			if(null == enemies)
+				enemies = new Dictionary<int, Dictionary<string, EnemyDefinition>>();
+
+			if(false == enemies.ContainsKey(enemyLevel))
+				enemies[enemyLevel] = new Dictionary<string, EnemyDefinition>();
+
+			enemies[enemyLevel].Add(enemy.name, enemy);
+		}
+	}
+
+	void CreateWeapons()
+	{
+		int weaponLevel = 0;
+		
+		// Level 0 //
+
+		/// Melee
+		NewWeapon("Knife", Weapon.Type.Melee, 1, -1, 0, weaponLevel, new Roll("d4",1),
+		          new Attack("Swing", -1, 1),
+		          new Attack("Stab", 3, -1));
+		NewWeapon("Bat", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d6",1),
+		          new Attack("Swing"),
+		          new Attack("Chop", 3, -2));
+		/// Ranged
+		NewWeapon("Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel, new Roll("d6",1),
+		          new Attack("Fire", 0, -1));
+		/// Magic
+		NewWeapon("Magical Spray", Weapon.Type.Magical, 0, -1, 1, weaponLevel, new Roll("d4", 1),
+		          new Attack("Flu Gleek"),
+		          new Attack("Snickers Spit", 2, -1));
+		
+		// Level 1 //
+
+		weaponLevel++;
+		NewWeapon("Rusty Hatchet", Weapon.Type.Melee, 1, -1, 0, weaponLevel, new Roll("d6", 1),
+		          new Attack("Swipe"),
+		          new Attack("Chop", 4, -3),
+		          new Attack("Prod", -3, 3));
+		NewWeapon("Pistol", Weapon.Type.Ranged, 0, 0, 0, weaponLevel, new Roll("d8",1),
+		          new Attack("Fire", 0, 0),
+		          new Attack("Sideways Cocked", 3, -2));
+		NewWeapon("Expensive Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel, new Roll("d6",2),
+		          new Attack("Fire", 0, -1),
+		          new Attack("Spread", 3, -2));
+		NewWeapon("Magical Freezing", Weapon.Type.Magical, 0, -1, 1, weaponLevel, new Roll("d6", 1),
+		          new Attack("Throw Ice Cubes"),
+		          new Attack("Palm to Face", -2, 2));
+		NewWeapon("Magical Shards", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d6", 2),
+		          new Attack("Spare Change"),
+		          new Attack("Coin Roll", -4, 3),
+		          new Attack("Purse Punch", 3, -3));
+		
+		// Level 2 //
+		weaponLevel++;
+		NewWeapon("Nunchucks", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d4", 2),
+		          new Attack("Sideward"),
+		          new Attack("Upward", 3, -2));
+		NewWeapon("Bo", Weapon.Type.Melee, 1, 0, -1, weaponLevel, new Roll("d6", 1),
+		          new Attack("Thrust", 2, -1),
+		          new Attack("Two-Step", -1, 1));
+		NewWeapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel, new Roll("d4",2),
+		          new Attack("Fling"),
+		          new Attack("Critical", 5, -3));
+		NewWeapon("Magical Burning", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d4", 2),
+		          new Attack("Flaming Flyer"),
+		          new Attack("Throw Lighter", 6, -4),
+		          new Attack("Spit Gas", -2, 2));
+		/////////////
+	}
+
+	void CreateEnemies()
+	{
+		// -- Create a few enemies
+		int enemyLevel = 0;
+
+
+		// Level 0 //
+
+		NewEnemy("Bunny", getWeapon("Knife"), 6, 1, 3, 10, -1, enemyLevel);
+		NewEnemy(
+			/* Enemy Name */"Bathead",
+			/* Weapon */getWeapon("Bat"),
+			/* Experience Value */9,
+			/* Change Value */15,
+			/* Health */20,
+			/* Speed */8,
+			/* Defense */0,
+			enemyLevel);
+		// Boss
+		NewEnemy("Bossy Hoss", getWeapon("Magical Shards"), 11, 30, 30, 5, -1, enemyLevel, true);
+
+
+		// Level 1 //
+
+		enemyLevel++;
+		NewEnemy("Stabby", getWeapon("Knife"), 10, 10, 14, 6, 0, enemyLevel);
+		NewEnemy("Pistol Peach", getWeapon("Pistol"), 12, 10, 16, 6, 0, enemyLevel);
+		NewEnemy("Kris Crossbow", getWeapon("Crossbow"), 12, 10, 15, 6, 0, enemyLevel);
+		//Boss
+		NewEnemy("Thuggalo", getWeapon("Hatchet"), 20, 30, 40, 5, -1, enemyLevel, true);
+
+
+		// Level 2 //
+
+		enemyLevel++;
+		NewEnemy("Rival Schooler", getWeapon("Bo"), 10, 10, 18, 6, 0, enemyLevel);
+		NewEnemy("Anime Punk", getWeapon("Nunchucks"), 10, 10, 20, 6, 0, enemyLevel);
+		NewEnemy("Kitty Kat", getWeapon("Throwing Stars"), 10, 10, 15, 6, 0, enemyLevel);
+		//Boss
+		NewEnemy("Dojo Property Mgr", getWeapon("Pistol"), 30, 30, 55, 4, -1, enemyLevel, true);
+
+		/////////////
+	}
 
 	void OnEnable ()
 	{
-		int weaponLevel = 0;
-		weapons  = new Dictionary<int, Dictionary<string, Weapon>>();
+		CreateWeapons();
 
-		// -- Weapons
-		weaponLevel++; // Level 1 Weapons
-
-		weapons[weaponLevel] = new Dictionary<string, Weapon>();
-
-		/// Melee
-		Weapon bat = new Weapon("Bat", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d6",1));
-		bat.AddAttack(new Attack("Swing", bat.roll));
-		bat.AddAttack(new Attack("Chop", bat.roll, 3, -2));
-		bat.AddAttack(new Attack("Prod", bat.roll, -3, 3));
-		weapons[weaponLevel].Add(bat.name, bat);
-
-		Weapon knife = new Weapon("Knife", Weapon.Type.Melee, 1, -1, 0, weaponLevel, new Roll("d4",1));
-		knife.AddAttack(new Attack("Swing", knife.roll, -1, 1));
-		knife.AddAttack(new Attack("Stab", knife.roll, 3, -1));
-		weapons[weaponLevel].Add(knife.name, knife);
-
-		Weapon nunchucks = new Weapon("Nunchucks", Weapon.Type.Melee, 1, 0, 0, weaponLevel, new Roll("d4", 2));
-		nunchucks.AddAttack(new Attack("Sideward", nunchucks.roll));
-		nunchucks.AddAttack(new Attack("Upward", nunchucks.roll, 3, -2));
-		weapons[weaponLevel].Add(nunchucks.name, nunchucks);
-
-		/// Ranged
-		Weapon pistol = new Weapon("Pistol", Weapon.Type.Ranged, 0, 0, 0, weaponLevel, new Roll("d8",1));
-		pistol.AddAttack(new Attack("Fire", pistol.roll, 0, 0));
-		pistol.AddAttack(new Attack("Sideways Cocked", pistol.roll, 3, -2));
-		weapons[weaponLevel].Add(pistol.name, pistol);
-
-		Weapon crossbow = new Weapon("Crossbow", Weapon.Type.Ranged, 0, 1, 0, weaponLevel, new Roll("d6",2));
-		crossbow.AddAttack(new Attack("Fire", crossbow.roll, 0, -1));
-		weapons[weaponLevel].Add(crossbow.name, crossbow);
-
-		Weapon throwingStars = new Weapon("Throwing Stars", Weapon.Type.Ranged, 0, -1, 0, weaponLevel, new Roll("d4",2));
-		throwingStars.AddAttack(new Attack("Fling", throwingStars.roll));
-		throwingStars.AddAttack(new Attack("Critical", throwingStars.roll, 5, -3));
-		weapons[weaponLevel].Add(throwingStars.name, throwingStars);
-
-		/// Magic
-		Weapon iceCubes = new Weapon("Magic Ice Cubes", Weapon.Type.Magical, 0, -1, 1, weaponLevel, new Roll("d6", 1));
-		iceCubes.AddAttack(new Attack("Throw Cold", iceCubes.roll));
-		iceCubes.AddAttack(new Attack("Palm to Face", iceCubes.roll, -2, 2));
-		weapons[weaponLevel].Add(iceCubes.name, iceCubes);
-
-		Weapon firePaper = new Weapon("Magical Lit Paper", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d4", 2));
-		firePaper.AddAttack(new Attack("Flaming Flyer", firePaper.roll));
-		firePaper.AddAttack(new Attack("Throw Lighter", firePaper.roll, 6, -4));
-		firePaper.AddAttack(new Attack("Spit Gas", firePaper.roll, -2, 2));
-		weapons[weaponLevel].Add(firePaper.name, firePaper);
-
-		Weapon metalShards = new Weapon("Magical Metal Shards", Weapon.Type.Magical, 1, -1, 1, weaponLevel, new Roll("d6", 2));
-		metalShards.AddAttack(new Attack("Spare Change", metalShards.roll));
-		metalShards.AddAttack(new Attack("Coin Roll", metalShards.roll, -4, 3));
-		metalShards.AddAttack(new Attack("Purse Punch", metalShards.roll, 3, -3));
-		weapons[weaponLevel].Add(metalShards.name, metalShards);
-
-
-		/////////////
-
-
-		// -- Create a few enemies
-		int enemyLevel = 0;
-		enemies = new Dictionary<int, Dictionary<string, EnemyDefinition>>();
-
-		enemyLevel++;
-		enemies[enemyLevel] = new Dictionary<string, EnemyDefinition>();
-
-		// Easy
-		enemies[enemyLevel].Add(
-			"Bunny",
-			new EnemyDefinition("Bunny", weapons[1]["Knife"], 1, 1, 3, 10, -1, enemyLevel));
-
-		// BatHead //
-		enemies[enemyLevel].Add(
-			"Bathead", new EnemyDefinition("Bathead"	/* Enemy Name */,
-			weapons[1]["Bat"],		/* Weapon */
-			5,											/* Experience Value */
-			15,											/* Change Value */
-			20,											/* Health */
-			8,											/* Speed */
-			0,											/* Defense */
-		    enemyLevel));
-		// Stabby //
-		enemies[enemyLevel].Add(
-			"Stabby",
-			new EnemyDefinition("Stabby", weapons[1]["Knife"], 4, 10, 14, 6, 0, enemyLevel));
-
-		// Pistol Peach //
-		enemies[enemyLevel].Add(
-			"Pistol Peach",
-			new EnemyDefinition("Pistol Peach", weapons[1]["Pistol"], 4, 10, 16, 6, 0, enemyLevel));
-		
-		// Kris Crossbow //
-		enemies[enemyLevel].Add(
-			"Kris Crossbow",
-			new EnemyDefinition("Kris Crossbow", weapons[1]["Crossbow"], 4, 10, 15, 6, 0, enemyLevel));
-
-		int bossLevel = 0;
-		bosses = new Dictionary<int, Dictionary<string, EnemyDefinition>>();
-		
-		bossLevel++;
-		bosses[bossLevel] = new Dictionary<string, EnemyDefinition>();
-
-		// Bossy Hoss //
-		bosses[bossLevel].Add(
-			"Bossy Hoss",
-			new EnemyDefinition("Bossy Hoss", weapons[1]["Magical Metal Shards"], 20, 30, 30, 5, -1, enemyLevel));
-		/////////////
+		CreateEnemies();
 	}
 
 	public List<EnemyDefinition> getEnemiesPerLevel(int level)
@@ -167,7 +231,12 @@ public class GameControllerScript : MonoBehaviour {
 
 	public List<EnemyDefinition> getBossPerLevel(int level)
 	{
-		return new List<EnemyDefinition>(bosses[level].Values);
+		Dictionary<string, EnemyDefinition> bossDict = new Dictionary<string, EnemyDefinition>();
+
+		if(true == bosses.TryGetValue(level, out bossDict))
+			return new List<EnemyDefinition>(bosses[level].Values);
+		else
+			return new List<EnemyDefinition>(bosses[0].Values);
 	}
 
 	public EnemyDefinition getEnemyByName(int level, string enemyName)
@@ -208,7 +277,6 @@ public class GameControllerScript : MonoBehaviour {
 		Player player = new Player(scoreoidPlayer.playerName,
 									getWeapon(scoreoidPlayer.weapon),
 									scoreoidPlayer.xp,
-									scoreoidPlayer.level,
 									scoreoidPlayer.change,
 									scoreoidPlayer.numberOfKills);
 
@@ -222,9 +290,12 @@ public class GameControllerScript : MonoBehaviour {
 
 	public List<Weapon> getWeaponTypes(int level)
 	{
-		//TODO: This will throw keyexception until I finish buiding out the content more
-		//return new List<Weapon>(weapons[level].Values);
-		return new List<Weapon>(weapons[1].Values);
+		Dictionary<string,Weapon> weaponTypes = new Dictionary<string, Weapon>();
+
+		if(weapons.TryGetValue(level, out weaponTypes))
+			return new List<Weapon>(weaponTypes.Values);
+		else
+			return new List<Weapon>(weapons[0].Values);
 	}
 
 	public Weapon getWeapon(string weaponName)
@@ -248,7 +319,7 @@ public class GameControllerScript : MonoBehaviour {
 			}
 		}
 
-		return null;
+		return getWeapon("Magical Shards");
 	}
 
 	public EnemyDefinition getEnemy(string enemyName)
@@ -373,13 +444,15 @@ public class GameControllerScript : MonoBehaviour {
 		public Roll roll {get;set;}
 		public Type type {get;set;}
 		public int hitModifier {get;set;}
-
 		
-		public BattleAction(Type theType, string theName, Roll theRoll, int hitMod)
+		public BattleAction(Type theType, string theName, int hitMod=0, Roll theRoll=null)
 		{
 			type = theType;
 			name = theName;
-			roll = theRoll;
+
+			if(null != theRoll)	//  leave it uninitialized, bleh
+				roll = theRoll;
+
 			hitModifier = hitMod;
 		}
 	}
@@ -391,11 +464,10 @@ public class GameControllerScript : MonoBehaviour {
 	{
 		public int damageModifier {get;set;}
 
-		public Attack(string theName, Roll theRoll,
-		              int dmgMod=0, int hitMod=0,
+		public Attack(string theName, int dmgMod=0, int hitMod=0,
 		              BattleAction.Type actionType=BattleAction.Type.Attack)
 			: base((BattleAction.Type.AttackAll == actionType ? actionType : BattleAction.Type.Attack),
-			       theName, theRoll, hitMod)
+			       theName, hitMod)
 		{
 			damageModifier = dmgMod;
 		}
