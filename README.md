@@ -3,6 +3,14 @@ Spare Change
 =============
 Dice Fighting, Changing weapons, Collecting Spare Change,... all in a day's usual activities.
 
+Technology used:
+  GameEngine: Unity
+  Web Hosting: Google App Engine
+  Additional: Scoreoid.com for character storage
+  Art: Necromancer Skin (See the Unity Asset Store)
+  Sprites: OpenGameArt.com
+
+
 ![Title Screen](Screenshots/SpareChange_TitleScreen.png)
 ![Player Profile](Screenshots/SpareChange_PlayerProfile.png)
 ![Battle Mode](Screenshots/SpareChange_BattleMode_PlayerTurn.png)
